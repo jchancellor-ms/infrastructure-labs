@@ -1,12 +1,11 @@
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+Install-Module CredentialSpec -Force
+
 Configuration k8s {
     #########################################################################
     # Import the DSC modules used in the configuration
     ########################################################################
     Import-DscResource -ModuleName PSDesiredStateConfiguration
-    Import-DscResource -ModuleName ActiveDirectoryDsc
-    Import-DscResource -ModuleName DnsServerDsc
-    Import-DscResource -ModuleName SecurityPolicyDsc
-    Import-DscResource -ModuleName ComputerManagementDsc
     Import-DSCResource -Name WindowsFeature  
 
     Node localhost
@@ -35,8 +34,7 @@ Configuration k8s {
 
         #Install containerd
         script 'installContainerd' {
-            PsDscRunAsCredential = $AdminCredential
-            GetScript            = { return @{result = 'Adding Admin User to SQL sysadmin role for DB creation' } }
+            GetScript            = { return @{result = 'Installing Containerd' } }
             TestScript           = { 
                 #check to see if the containerd service exists
                 #Future versions of this may need to validate specific service configurations
@@ -69,4 +67,36 @@ Configuration k8s {
                 Start-Service containerd
             }
         }
+
+        script 'configureAKVGmsaCcgPlugin' {
+            GetScript            = { return @{result = 'Installing GMSA CCG Plugin' } }
+            TestScript           = { 
+                #check to see if the new reg key exists
+                if ((Get-ChildItem -Path 'HKLM:\SOFTWARE\CLASSES\CLSID\{CCC2A336-D7F3-4818-A213-272B7924213E}' -ErrorAction SilentlyContinue).count -ne 2) { 
+                    $return = $false 
+                }
+                else
+                {
+                    $return = $true
+                }
+                
+                return $return 
+            }
+            SetScript            = {                    
+                #move to the temp directory
+                New-Item -Path 'c:\temp' -ItemType Directory -ErrorAction SilentlyContinue
+                set-location -Path 'c:\temp'
+                #consider putting a version of this locally in the repository to avoid location/version drift
+                curl.exe -L https://kubernetesartifacts.azureedge.net/ccgakvplugin/v1.1.4/binaries/windows-gmsa-ccgakvplugin-v1.1.4.zip -o windows-gmsa-ccgakvplugin.zip
+                Expand-Archive -LiteralPath .\windows-gmsa-ccgakvplugin.zip -DestinationPath .\gmsa
+
+                set-location -path 'c:\temp\gmsa'
+                Invoke-webRequest -Uri https://raw.githubusercontent.com/kubernetes-sigs/image-builder/master/images/capi/ansible/windows/roles/gmsa/files/install-gmsa-keyvault-plugin.ps1 -outfile .\install-gmsa-keyvault-plugin.ps1
+                .\install-gmsa-keyvault-plugin.ps1
+            }
+        }
+    }
 }
+
+k8s
+Start-dscConfiguration -Path ./k8s -Force
