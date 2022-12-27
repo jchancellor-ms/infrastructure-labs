@@ -3,8 +3,8 @@ New-Item -Path 'c:\temp' -ItemType Directory -ErrorAction SilentlyContinue
 set-location -Path 'c:\temp'
 
 #copy the dsc script file locally
-#Invoke-webRequest -Uri ${dsc_uri} -outfile ${dsc_outfile}
-Invoke-webRequest -Uri https://raw.githubusercontent.com/jchancellor-ms/infrastructure-labs/main/templates/k8s_windows_dsc.ps1 -outfile .\k8s_windows_dsc.ps1
+Invoke-webRequest -Uri ${dsc_uri} -outfile ${dsc_outfile}
+#Invoke-webRequest -Uri https://raw.githubusercontent.com/jchancellor-ms/infrastructure-labs/main/templates/k8s_windows_dsc.ps1 -outfile .\k8s_windows_dsc.ps1
 
 
 #execute the dsc configuration
@@ -31,4 +31,3 @@ Set-DscLocalConfigurationManager -Path .\lcmConfig -Verbose
 ### Create the MOF for the configuration
 .\${dsc_outfile}
 
-#Create a credential spec file

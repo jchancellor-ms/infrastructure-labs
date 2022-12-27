@@ -60,20 +60,16 @@ resource "azurerm_windows_virtual_machine" "this" {
   }
 }
 
-/*
-data "template_file" "configure_node" {
-  template = file("${path.module}/configure_primary_dc.ps1")
 
-  vars = {
-    password                      = random_password.userpass.result
-    active_directory_domain       = var.active_directory_domain
-    active_directory_netbios_name = (split(".", var.active_directory_domain))[0]
-  }
+data "template_file" "configure_node" {
+  template = file("${path.module}/../../templates/${var.template_filename}")
+
+  vars = var.config_values
 }
 
 #TODO: Consider moving all of this to DSC instead of powershell 
 resource "azurerm_virtual_machine_extension" "configure_node" {
-  name                 = "configure_primary_dc"
+  name                 = "configure_node"
   virtual_machine_id   = azurerm_windows_virtual_machine.this.id
   publisher            = "Microsoft.Compute"
   type                 = "CustomScriptExtension"
@@ -81,9 +77,9 @@ resource "azurerm_virtual_machine_extension" "configure_node" {
 
   protected_settings = <<PROTECTED_SETTINGS
     {
-        "commandToExecute": "powershell -command \"[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${base64encode(data.template_file.configure_node.rendered)}')) | Out-File -filepath configure_primary_dc.ps1\" && powershell -ExecutionPolicy Unrestricted -File configure_primary_dc.ps1"
+        "commandToExecute": "powershell -command \"[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${base64encode(data.template_file.configure_node.rendered)}')) | Out-File -filepath configure_node.ps1\" && powershell -ExecutionPolicy Unrestricted -File configure_node.ps1"
     }
 PROTECTED_SETTINGS
 
 }
-*/
+

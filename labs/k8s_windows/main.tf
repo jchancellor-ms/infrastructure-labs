@@ -9,13 +9,18 @@ locals {
   k8s_linux_vm_name   = "kl-${var.region}-${local.name_string_suffix}"
   k8s_windows_vm_name = "kw-${var.region}-${local.name_string_suffix}"
   bastion_name        = "${var.prefix}-bastion-${var.region}-${local.name_string_suffix}"
-  ou_name = "k8s"
-  ou      = "OU=${local.ou_name},${join(",", [for name in split(".", var.domain_fqdn) : "DC=${name}"])}"
+  ou_name             = "k8s"
+  ou                  = "OU=${local.ou_name},${join(",", [for name in split(".", var.domain_fqdn) : "DC=${name}"])}"
 
   config_values = {
     node_token_value = "${random_string.node_part1.result}.${random_string.node_part2.result}"
     node_token_hash  = sha256("${random_string.node_part1.result}.${random_string.node_part2.result}")
     control_node_ip  = module.k8s_server.private_ip_address
+  }
+
+  config_values_windows = {
+    dsc_uri     = "https://raw.githubusercontent.com/jchancellor-ms/infrastructure-labs/main/templates/k8s_windows_dsc.ps1"
+    dsc_outfile = "k8s_windows_dsc.ps1"
   }
 }
 
@@ -30,7 +35,7 @@ resource "azurerm_resource_group" "lab_rg" {
 
 #Create a hub virtual network for the DC and the bastion for management
 module "lab_hub_virtual_network" {
-  source = "../modules/lab_vnet_variable_subnets"
+  source = "../../modules/lab_vnet_variable_subnets"
 
   rg_name            = azurerm_resource_group.lab_rg.name
   rg_location        = azurerm_resource_group.lab_rg.location
@@ -42,7 +47,7 @@ module "lab_hub_virtual_network" {
 
 #create a spoke Vnet with custom DNS pointing to the DC
 module "lab_spoke_virtual_network" {
-  source = "../modules/lab_vnet_variable_subnets"
+  source = "../../modules/lab_vnet_variable_subnets"
 
   rg_name            = azurerm_resource_group.lab_rg.name
   rg_location        = azurerm_resource_group.lab_rg.location
@@ -56,7 +61,7 @@ module "lab_spoke_virtual_network" {
 
 #create peering to hub for spoke
 module "azure_vnet_peering_hub_defaults" {
-  source = "../modules/lab_vnet_peering"
+  source = "../../modules/lab_vnet_peering"
 
   spoke_vnet_name = local.spoke_vnet_name
   spoke_vnet_id   = module.lab_spoke_virtual_network.vnet_id
@@ -76,7 +81,7 @@ data "azuread_client_config" "current" {}
 
 #create the keyvault to store the password secrets for newly created vms
 module "on_prem_keyvault_with_access_policy" {
-  source = "../modules/avs_key_vault"
+  source = "../../modules/avs_key_vault"
 
   #values to create the keyvault
   rg_name                   = azurerm_resource_group.lab_rg.name
@@ -88,7 +93,7 @@ module "on_prem_keyvault_with_access_policy" {
 }
 
 module "lab_bastion" {
-  source = "../modules/lab_bastion_simple"
+  source = "../../modules/lab_bastion_simple"
 
   bastion_name      = local.bastion_name
   rg_name           = azurerm_resource_group.lab_rg.name
@@ -106,7 +111,7 @@ resource "azurerm_availability_set" "domain_controllers" {
 }
 
 module "lab_dc" {
-  source = "../modules/lab_guest_server_2019_dc"
+  source = "../../modules/lab_guest_server_2019_dc"
 
   rg_name                       = azurerm_resource_group.lab_rg.name
   rg_location                   = azurerm_resource_group.lab_rg.location
@@ -119,18 +124,15 @@ module "lab_dc" {
   private_ip_address_1          = cidrhost(module.lab_hub_virtual_network.subnet_ids["DCSubnet"].address_prefixes[0], 100)
   ou_name                       = local.ou_name
   availability_set_id           = azurerm_availability_set.domain_controllers.id
-  
+
   depends_on = [
     module.on_prem_keyvault_with_access_policy
   ]
 }
 
-
-
-
 ###
 module "k8s_server" {
-  source = "../modules/lab_guest_server_ubuntu"
+  source = "../../modules/lab_guest_server_ubuntu"
 
   rg_name           = azurerm_resource_group.lab_rg.name
   rg_location       = azurerm_resource_group.lab_rg.location
@@ -141,6 +143,10 @@ module "k8s_server" {
   template_filename = "k8s.yaml"
   #template_filename         = "empty.yaml"
   config_values = local.config_values
+
+  depends_on = [
+    module.on_prem_keyvault_with_access_policy
+  ]
 }
 
 
@@ -168,7 +174,7 @@ output "node_hash" {
 
 #create a second linux node and join it to the node pool.  (allows calico to run pods on a non control plane node?)
 module "k8s_server_linux" {
-  source = "../modules/lab_guest_server_ubuntu"
+  source = "../../modules/lab_guest_server_ubuntu"
 
   rg_name           = azurerm_resource_group.lab_rg.name
   rg_location       = azurerm_resource_group.lab_rg.location
@@ -194,18 +200,21 @@ resource "azurerm_availability_set" "windows_nodes" {
 
 ### Deploy windows Node(s)
 module "windows_node_servers" {
-  source   = "../modules/lab_guest_server_2022_no_domain_k8s"
+  source = "../../modules/lab_guest_server_windows_with_script"
 
-  rg_name                   = azurerm_resource_group.lab_rg.name
-  rg_location               = azurerm_resource_group.lab_rg.location
-  vm_name                   = local.k8s_windows_vm_name
-  subnet_id                 = module.lab_spoke_virtual_network.subnet_ids["K8sSubnet"].id
-  vm_sku                    = "Standard_D4as_v5"
-  key_vault_id              = module.on_prem_keyvault_with_access_policy.keyvault_id 
-  os_sku                    = "2022-Datacenter"
+  rg_name           = azurerm_resource_group.lab_rg.name
+  rg_location       = azurerm_resource_group.lab_rg.location
+  vm_name           = local.k8s_windows_vm_name
+  subnet_id         = module.lab_spoke_virtual_network.subnet_ids["K8sSubnet"].id
+  vm_sku            = "Standard_D4as_v5"
+  key_vault_id      = module.on_prem_keyvault_with_access_policy.keyvault_id
+  os_sku            = "2022-Datacenter"
+  template_filename = "k8s_windows_ps.ps1"
+  config_values     = local.config_values_windows
   #availability_set_id       = azurerm_availability_set.windows_nodes.id
 
   depends_on = [
+    module.lab_dc,
     module.on_prem_keyvault_with_access_policy,
   ]
 }

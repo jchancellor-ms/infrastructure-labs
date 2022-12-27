@@ -26,6 +26,17 @@ variable "key_vault_id" {
 }
 
 variable "os_sku" {
-  type = string
+  type        = string
   description = "The OS sku value for the windows server"
+}
+
+variable "template_filename" {
+  description = "filename of the powershell script template to use in the custom script extension. Leaving this unset will default to an empty template empty.ps1"
+  type        = string
+  default     = "empty.ps1"
+}
+
+variable "config_values" {
+  description = "map of variable values defined in the config template being deployed"
+  default     = {}
 }

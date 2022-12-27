@@ -83,6 +83,7 @@ Configuration k8s {
                 return $return 
             }
             SetScript            = {                    
+                #Patterned after file found here - https://github.com/kubernetes-sigs/image-builder/blob/master/images/capi/ansible/windows/roles/gmsa/tasks/gmsa_keyvault.yml
                 #move to the temp directory
                 New-Item -Path 'c:\temp' -ItemType Directory -ErrorAction SilentlyContinue
                 set-location -Path 'c:\temp'
@@ -90,9 +91,17 @@ Configuration k8s {
                 curl.exe -L https://kubernetesartifacts.azureedge.net/ccgakvplugin/v1.1.4/binaries/windows-gmsa-ccgakvplugin-v1.1.4.zip -o windows-gmsa-ccgakvplugin.zip
                 Expand-Archive -LiteralPath .\windows-gmsa-ccgakvplugin.zip -DestinationPath .\gmsa
 
+                #copy keyvault plugin to system32
                 set-location -path 'c:\temp\gmsa'
-                Invoke-webRequest -Uri https://raw.githubusercontent.com/kubernetes-sigs/image-builder/master/images/capi/ansible/windows/roles/gmsa/files/install-gmsa-keyvault-plugin.ps1 -outfile .\install-gmsa-keyvault-plugin.ps1
+                Move-Item -Force -Path .\CCGAKVPlugin.dll -Destination "$ENV:Systemroot\system32\"
+                #Register the key vault CCG plugin                
                 .\install-gmsa-keyvault-plugin.ps1
+                #Install the logging manifests
+                wevtutil.exe um .\CCGEvents.man
+                wevtutil.exe im .\CCGEvents.man
+                wevtutil.exe um .\CCGAKVPluginEvents.man
+                wevtutil.exe im .\CCGAKVPluginEvents.man
+
             }
         }
     }
