@@ -14,7 +14,7 @@ terraform {
     resource_group_name  = "core-infra-westus2-tfstate"
     storage_account_name = "prodwestus2tfstate"
     container_name       = "labtfstate"
-    key                  = "k8slab-a2.tfstate"
+    key                  = "k8slab-a4.tfstate"
     #use_azuread_auth     = true
     #subscription_id      = "77762a62-5480-4552-80c3-f87e20caa9cd"
     #tenant_id            = "72f988bf-86f1-41af-91ab-2d7cd011db47"

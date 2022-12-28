@@ -23,23 +23,24 @@ variable "key_vault_id" {
   type        = string
   description = "The resource ID for the key vault where the virtual machine secrets will be deployed"
 }
-variable "active_directory_domain" {
-  type        = string
-  description = "The full domain name for the domain being created"
-}
-variable "active_directory_netbios_name" {
-  type        = string
-  description = "The netbios name for the domain being created"
-}
+
 variable "private_ip_address_1" {
   type        = string
   description = "The static IP address of the domain controller which will be injected into DNS"
 }
-variable "ou_name" {
-  type        = string
-  description = "custom OU to create during DC build."
-}
+
 variable "availability_set_id" {
   type        = string
   description = "the resource id of the availability set where this VM will be deployed"
+}
+
+variable "template_filename" {
+  description = "filename of the powershell script template to use in the custom script extension. Leaving this unset will default to an empty template empty.ps1"
+  type        = string
+  default     = "empty.ps1"
+}
+
+variable "config_values" {
+  description = "map of variable values defined in the config template being deployed"
+  default     = {}
 }

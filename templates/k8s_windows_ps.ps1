@@ -24,7 +24,7 @@ Configuration lcmConfig {
 }
 
 Write-Host "Creating LCM mof"
-lcmConfig -NodeName localhost -OutputPath .\lcmConfig
+lcmConfig -InstanceName localhost -OutputPath .\lcmConfig
 Set-DscLocalConfigurationManager -Path .\lcmConfig -Verbose
 #Get-DscLocalConfigurationManager
 

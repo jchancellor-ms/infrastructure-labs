@@ -1,5 +1,5 @@
 locals {
-
+  dc_config_values = merge(var.config_values, { adminusername = "azureuser", adminpassword = random_password.userpass.result })
 }
 
 resource "random_password" "userpass" {
@@ -63,13 +63,9 @@ resource "azurerm_windows_virtual_machine" "primary" {
 }
 
 data "template_file" "configure_primary_dc" {
-  template = file("${path.module}/configure_primary_dc.ps1")
+  template = file("${path.module}/../../templates/${var.template_filename}")
 
-  vars = {
-    password                      = random_password.userpass.result
-    active_directory_domain       = var.active_directory_domain
-    active_directory_netbios_name = (split(".", var.active_directory_domain))[0]
-  }
+  vars = local.dc_config_values
 }
 
 #TODO: Consider moving all of this to DSC instead of powershell 

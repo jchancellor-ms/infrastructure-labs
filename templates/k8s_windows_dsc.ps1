@@ -1,6 +1,30 @@
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 Install-Module CredentialSpec -Force
 
+#create the temp directory
+New-Item -Path 'c:\temp' -ItemType Directory -ErrorAction SilentlyContinue
+set-location -Path 'c:\temp'
+
+###Configure the LCM
+[DSCLocalConfigurationManager()]
+Configuration lcmConfig {
+    Node localhost
+    {
+        Settings
+        {
+            RefreshMode = 'Push'
+            ActionAfterReboot = "ContinueConfiguration"
+            RebootNodeIfNeeded = $true
+            ConfigurationModeFrequencyMins = 15
+        }
+    }
+}
+
+Write-Host "Creating LCM mof"
+lcmConfig -InstanceName localhost -OutputPath .\lcmConfig
+Set-DscLocalConfigurationManager -Path .\lcmConfig -Verbose
+
+#build the dsc configuration
 Configuration k8s {
     #########################################################################
     # Import the DSC modules used in the configuration
@@ -32,6 +56,7 @@ Configuration k8s {
             IncludeAllSubFeature = $true 
         }
 
+
         #Install containerd
         script 'installContainerd' {
             GetScript            = { return @{result = 'Installing Containerd' } }
@@ -42,8 +67,7 @@ Configuration k8s {
                 if (!(Get-Service containerd -erroraction SilentlyContinue)) { 
                     $return = $false 
                 }
-                else
-                {
+                else {
                     $return = $true
                 }
                 
@@ -75,8 +99,7 @@ Configuration k8s {
                 if ((Get-ChildItem -Path 'HKLM:\SOFTWARE\CLASSES\CLSID\{CCC2A336-D7F3-4818-A213-272B7924213E}' -ErrorAction SilentlyContinue).count -ne 2) { 
                     $return = $false 
                 }
-                else
-                {
+                else {
                     $return = $true
                 }
                 
@@ -95,7 +118,7 @@ Configuration k8s {
                 set-location -path 'c:\temp\gmsa'
                 Move-Item -Force -Path .\CCGAKVPlugin.dll -Destination "$ENV:Systemroot\system32\"
                 #Register the key vault CCG plugin                
-                .\install-gmsa-keyvault-plugin.ps1
+                install-gmsa-keyvault-plugin.ps1
                 #Install the logging manifests
                 wevtutil.exe um .\CCGEvents.man
                 wevtutil.exe im .\CCGEvents.man
@@ -107,5 +130,8 @@ Configuration k8s {
     }
 }
 
+#build the MOF
 k8s
+
+#run the DSC configuration
 Start-dscConfiguration -Path ./k8s -Force

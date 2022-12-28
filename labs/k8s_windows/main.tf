@@ -22,6 +22,15 @@ locals {
     dsc_uri     = "https://raw.githubusercontent.com/jchancellor-ms/infrastructure-labs/main/templates/k8s_windows_dsc.ps1"
     dsc_outfile = "k8s_windows_dsc.ps1"
   }
+
+  config_values_dc = {
+    active_directory_domain       = "azuretestzone.com"
+    active_directory_netbios_name = "azuretestzone"
+    app_ad_user                   = "testgmsaapp"
+    app_ad_user_pass              = random_password.userpass.result
+    gmsa_group_name               = "testgmsagroup"
+    gmsa_account_name             = "testgmsaaccount"
+  }
 }
 
 ###################################################################
@@ -124,10 +133,19 @@ module "lab_dc" {
   private_ip_address_1          = cidrhost(module.lab_hub_virtual_network.subnet_ids["DCSubnet"].address_prefixes[0], 100)
   ou_name                       = local.ou_name
   availability_set_id           = azurerm_availability_set.domain_controllers.id
+  config_values                 = local.config_values_dc
+  template_filename             = "dc_windows_dsc.ps1"
 
   depends_on = [
     module.on_prem_keyvault_with_access_policy
   ]
+}
+
+#wait for the dc to build and reboot
+resource "time_sleep" "wait_600_seconds" {
+  depends_on = [module.lab_dc]
+
+  create_duration = "600s"
 }
 
 ###
@@ -198,6 +216,8 @@ resource "azurerm_availability_set" "windows_nodes" {
   tags                = var.tags
 }
 
+
+
 ### Deploy windows Node(s)
 module "windows_node_servers" {
   source = "../../modules/lab_guest_server_windows_with_script"
@@ -209,13 +229,31 @@ module "windows_node_servers" {
   vm_sku            = "Standard_D4as_v5"
   key_vault_id      = module.on_prem_keyvault_with_access_policy.keyvault_id
   os_sku            = "2022-Datacenter"
-  template_filename = "k8s_windows_ps.ps1"
+  template_filename = "k8s_windows_dsc.ps1"
   config_values     = local.config_values_windows
   #availability_set_id       = azurerm_availability_set.windows_nodes.id
 
   depends_on = [
     module.lab_dc,
     module.on_prem_keyvault_with_access_policy,
+    time_sleep.wait_600_seconds
   ]
 }
 
+#create a gmsa user password
+resource "random_password" "userpass" {
+  length           = 20
+  special          = true
+  override_special = "_-!."
+  min_lower        = 2
+  min_numeric      = 2
+  min_upper        = 2
+  min_special      = 2
+}
+
+resource "azurerm_key_vault_secret" "vmpassword" {
+  name         = "testgmsaapp-password"
+  value        = random_password.userpass.result
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+  depends_on   = [module.on_prem_keyvault_with_access_policy.keyvault_id]
+}
