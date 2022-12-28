@@ -30,6 +30,7 @@ locals {
     app_ad_user_pass              = random_password.userpass.result
     gmsa_group_name               = "testgmsagroup"
     gmsa_account_name             = "testgmsaaccount"
+    
   }
 }
 
@@ -128,10 +129,7 @@ module "lab_dc" {
   subnet_id                     = module.lab_hub_virtual_network.subnet_ids["DCSubnet"].id
   vm_sku                        = "Standard_D4as_v5"
   key_vault_id                  = module.on_prem_keyvault_with_access_policy.keyvault_id
-  active_directory_domain       = var.domain_fqdn
-  active_directory_netbios_name = split(".", var.domain_fqdn)[0]
   private_ip_address_1          = cidrhost(module.lab_hub_virtual_network.subnet_ids["DCSubnet"].address_prefixes[0], 100)
-  ou_name                       = local.ou_name
   availability_set_id           = azurerm_availability_set.domain_controllers.id
   config_values                 = local.config_values_dc
   template_filename             = "dc_windows_dsc.ps1"
@@ -163,6 +161,8 @@ module "k8s_server" {
   config_values = local.config_values
 
   depends_on = [
+    module.lab_dc,
+    time_sleep.wait_600_seconds,
     module.on_prem_keyvault_with_access_policy
   ]
 }
@@ -205,6 +205,8 @@ module "k8s_server_linux" {
   config_values = local.config_values
 
   depends_on = [
+    module.lab_dc,
+    time_sleep.wait_600_seconds,
     module.k8s_server
   ]
 }

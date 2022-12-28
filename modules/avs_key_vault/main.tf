@@ -56,6 +56,10 @@ resource "azurerm_key_vault_access_policy" "deployment_user_access" {
     "Backup", "Delete", "DeleteSAS", "Get", "GetSAS", "List", "ListSAS", "Recover", "RegenerateKey", "Restore", "Set", "SetSAS", "Update"
   ]
 
+  key_permissions = [
+    "Backup", "Create", "Decrypt", "Delete", "Encrypt", "Get", "Import", "List", "Purge", "Recover", "Restore", "Sign", "UnwrapKey", "Update", "Verify", "WrapKey", "Release", "Rotate", "GetRotationPolicy", "SetRotationPolicy"
+  ]
+
   depends_on = [
     time_sleep.wait_30_seconds,
     azurerm_key_vault.infra_vault
@@ -63,5 +67,9 @@ resource "azurerm_key_vault_access_policy" "deployment_user_access" {
 
 }
 
+#add another wait timer to allow for key vault policy to apply
+resource "time_sleep" "wait_30_seconds_2" {
+  depends_on = [azurerm_key_vault_access_policy.deployment_user_access]
 
-
+  create_duration = "30s"
+}

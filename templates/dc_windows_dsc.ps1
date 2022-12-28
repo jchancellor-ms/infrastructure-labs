@@ -1,8 +1,10 @@
-#create the temp directory
 New-Item -Path 'c:\temp' -ItemType Directory -ErrorAction SilentlyContinue
 set-location -Path 'c:\temp'
 
-###Configure the LCM
+$cert = Get-ChildItem -Path cert:\LocalMachine\My\${dsc_cert_thumbprint}
+Export-Certificate -Cert $cert -FilePath .\dsc.cer
+certutil -encode dsc.cer dsc64.cer
+
 [DSCLocalConfigurationManager()]
 Configuration lcmConfig {
     Node localhost
@@ -13,6 +15,7 @@ Configuration lcmConfig {
             ActionAfterReboot = "ContinueConfiguration"
             RebootNodeIfNeeded = $true
             ConfigurationModeFrequencyMins = 15
+            CertificateID = "${dsc_cert_thumbprint}"
         }
     }
 }
@@ -21,18 +24,8 @@ Write-Host "Creating LCM mof"
 lcmConfig -InstanceName localhost -OutputPath .\lcmConfig
 Set-DscLocalConfigurationManager -Path .\lcmConfig -Verbose
 
-###Build the DSC configuration
-
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-Install-Module -Name ActiveDirectoryDsc -Force -AllowClobber
-Install-Module -Name DnsServerDsc -Force -AllowClobber
-Install-Module -Name SecurityPolicyDsc -Force -AllowClobber
-Install-Module -Name ComputerManagementDsc -Force -AllowClobber
-
 Configuration dc {
-    #########################################################################
-    # Import the DSC modules used in the configuration
-    ########################################################################
+   
     Import-DscResource -ModuleName PSDesiredStateConfiguration
     Import-DscResource -ModuleName ActiveDirectoryDsc
     Import-DscResource -ModuleName DnsServerDsc
@@ -40,7 +33,8 @@ Configuration dc {
     Import-DscResource -ModuleName ComputerManagementDsc
     Import-DSCResource -Name WindowsFeature
 
-    [pscredential]$credObject = New-Object System.Management.Automation.PSCredential (${adminUserName}, (ConvertTo-SecureString ${adminPassword} -AsPlainText -Force))
+    [pscredential]$credObject = New-Object System.Management.Automation.PSCredential ("${admin_username}", (ConvertTo-SecureString "${admin_password}" -AsPlainText -Force))
+    [pscredential]$gmsaAppCred = New-Object System.Management.Automation.PSCredential ("${app_ad_user}", (ConvertTo-SecureString "${app_ad_user_pass}" -AsPlainText -Force))
 
     Node localhost
     {
@@ -73,6 +67,14 @@ Configuration dc {
             IncludeAllSubFeature = $true 
         }
 
+        DnsServerForwarder 'SetForwarders'
+        {
+            IsSingleInstance = 'Yes'
+            IPAddresses      = @('8.8.8.8', '168.63.129.16')
+            UseRootHint      = $false
+            DependsOn        = "[WindowsFeature]dns"
+        }
+
         ADDomain 'thisDomain'
         {
             DomainName                    = '${active_directory_domain}'
@@ -81,29 +83,20 @@ Configuration dc {
             ForestMode                    = 'WinThreshold'
             DomainMode                    = 'WinThreshold'
             DomainNetBiosName             = '${active_directory_netbios_name}'
-            DependsOn                     = "[WindowsFeature]ADDSInstall"
-        }
-        #Set the KDS root key
-        ADKDSKey 'LabKDSRootKey'
-        {
-            Ensure                   = 'Present'
-            EffectiveTime            = ((get-date).addhours(-10))
-            AllowUnsafeEffectiveTime = $true # Use with caution
-            DependsOn                = "[ADDomain]thisDomain"
-        }
+            DependsOn                     = "[WindowsFeature]ad-domain-services"
+        }        
 
         ADUser '${app_ad_user}'
         {
             Ensure              = 'Present'
             UserName            = '${app_ad_user}'
-            Password            = (ConvertTo-SecureString -AsPlainText "${app_ad_user_pass}" -Force) 
+            Password            = $gmsaAppCred
             PasswordNeverResets = $true
             DomainName          = '${active_directory_domain}'
             Path                = 'CN=Users,DC=${active_directory_netbios_name},DC=com'
-            DependsOn                = "[ADDomain]thisDomain"
+            DependsOn                = "[WindowsFeature]ad-domain-services", "[ADDomain]thisDomain"
         }
 
-        #create a group for the GMSA user(s)
         ADGroup 'GmsaGroup'
         {
             GroupName   = '${gmsa_group_name}'
@@ -114,34 +107,45 @@ Configuration dc {
             MembersToInclude = @(
                 '${active_directory_netbios_name}\${app_ad_user}'
             )
-            DependsOn                = "[ADDomain]thisDomain"
+            DependsOn                = "[WindowsFeature]ad-domain-services", "[ADDomain]thisDomain"
         }
 
-        #create a GMSA account
+        ADKDSKey 'LabKDSRootKey'
+        {
+            Ensure                   = 'Present'
+            EffectiveTime            = ((get-date).addhours(-10))
+            AllowUnsafeEffectiveTime = $true # Use with caution
+            DependsOn                = "[WindowsFeature]ad-domain-services", "[ADDomain]thisDomain"
+        }
+
         ADManagedServiceAccount 'TestGmsaAccount'
         {
             Ensure             = 'Present'
             ServiceAccountName = '${gmsa_account_name}'
             AccountType        = 'Group'
             ManagedPasswordPrincipals = '${gmsa_group_name}'
-            DependsOn                = "[ADKDSKey]LabKDSRootKey"
+            DependsOn                = "[ADKDSKey]LabKDSRootKey", "[ADDomain]thisDomain", "[WindowsFeature]ad-domain-services"
 
         }
 
-        #assign a host SPN to the GMSA account
         ADServicePrincipalName 'GmsaHostShort'
         {
             ServicePrincipalName = 'host/${gmsa_account_name}'
             Account              = '${gmsa_account_name}$'
-            DependsOn            = "[ADManagedServiceAccount]TestGmsaAccount"
-        }
-        #Create a regular user for use by the plugin to access the GMSA        
-        
+            DependsOn            = "[ADManagedServiceAccount]TestGmsaAccount", "[ADKDSKey]LabKDSRootKey", "[ADDomain]thisDomain", "[WindowsFeature]ad-domain-services"
+        }       
     }
 }
 
-#build the MOF
-dc
-#run the DSC configuration
+$cd = @{
+    AllNodes = @(    
+        @{ 
+            NodeName = "localhost"
+            CertificateFile = "C:\temp\dsc64.cer"
+            Thumbprint = "${dsc_cert_thumbprint}"
+        }
+    ) 
+}
+dc -ConfigurationData $cd
 Start-dscConfiguration -Path ./dc -Force
 

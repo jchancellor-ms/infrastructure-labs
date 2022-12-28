@@ -44,3 +44,9 @@ variable "config_values" {
   description = "map of variable values defined in the config template being deployed"
   default     = {}
 }
+
+variable "cert_san_names" {
+  type = list(string)
+  description = "List of SAN names for the machine dsc certificate"
+  default = []  
+}
