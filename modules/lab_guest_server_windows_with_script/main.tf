@@ -1,3 +1,11 @@
+resource "random_string" "resources" {
+  length  = 4
+  special = false
+  upper   = false
+  lower   = true
+}
+
+
 #create initial login password
 resource "random_password" "userpass" {
   length           = 20
@@ -65,19 +73,25 @@ resource "azurerm_windows_virtual_machine" "this" {
 
   secret {
     certificate {
-        store = "My"
-        url = azurerm_key_vault_certificate.this.secret_id
-      }
+      store = "My"
+      url   = azurerm_key_vault_certificate.this.secret_id
+    }
+
+    certificate {
+      store = "Root"
+      url   = azurerm_key_vault_certificate.this.secret_id
+    }
     key_vault_id = var.key_vault_id
- }
+  }
 }
 
 #Add the virtual machine managed identity to the key vault access policy
+#Come back and pare this down to secret and certificate permissions required to manage and rotate certs and secrets
 resource "azurerm_key_vault_access_policy" "managed_identity_access" {
   key_vault_id = var.key_vault_id
 
-  tenant_id    = azurerm_windows_virtual_machine.this.identity[0].tenant_id
-  object_id    = azurerm_windows_virtual_machine.this.identity[0].principal_id
+  tenant_id = azurerm_windows_virtual_machine.this.identity[0].tenant_id
+  object_id = azurerm_windows_virtual_machine.this.identity[0].principal_id
 
   certificate_permissions = [
     "Get", "Create", "Delete", "DeleteIssuers", "GetIssuers", "Import", "List", "ListIssuers", "ManageContacts", "ManageIssuers", "Recover", "Restore", "SetIssuers", "Update"
@@ -98,7 +112,7 @@ resource "azurerm_key_vault_access_policy" "managed_identity_access" {
 
 #Create a certificate for DSC to use
 resource "azurerm_key_vault_certificate" "this" {
-  name         = "dsc-cert"
+  name         = "dsc-cert-${random_string.resources.result}"
   key_vault_id = var.key_vault_id
 
   certificate_policy {
@@ -130,7 +144,7 @@ resource "azurerm_key_vault_certificate" "this" {
     x509_certificate_properties {
       # Server Authentication = 1.3.6.1.5.5.7.3.1
       # Client Authentication = 1.3.6.1.5.5.7.3.2
-      extended_key_usage = ["1.3.6.1.5.5.7.3.1", "1.3.6.1.5.5.7.3.2", "2.5.29.37", "1.3.6.1.4.1.311.80.1" ]
+      extended_key_usage = ["1.3.6.1.5.5.7.3.1", "1.3.6.1.5.5.7.3.2", "2.5.29.37", "1.3.6.1.4.1.311.80.1"]
 
       key_usage = [
         "cRLSign",
@@ -150,9 +164,6 @@ resource "azurerm_key_vault_certificate" "this" {
     }
   }
 }
-
-
-
 
 data "template_file" "configure_node" {
   template = file("${path.module}/../../templates/${var.template_filename}")

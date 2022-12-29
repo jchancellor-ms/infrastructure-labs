@@ -53,18 +53,22 @@ Configuration dc {
             IncludeAllSubFeature = $true 
         }
 
+        WindowsFeature 'rsat-dns-server'
+        {
+            Name                 = 'rsat-dns-server'
+            Ensure               = 'Present'
+        }
+
         WindowsFeature 'rsat-adds'
         {
             Name                 = 'rsat-adds'
             Ensure               = 'Present'
-            IncludeAllSubFeature = $true 
         }
 
         WindowsFeature 'rsat-ad-powershell'
         {
             Name                 = 'rsat-ad-powershell'
             Ensure               = 'Present'
-            IncludeAllSubFeature = $true 
         }
 
         DnsServerForwarder 'SetForwarders'
@@ -94,7 +98,7 @@ Configuration dc {
             PasswordNeverResets = $true
             DomainName          = '${active_directory_domain}'
             Path                = 'CN=Users,DC=${active_directory_netbios_name},DC=com'
-            DependsOn                = "[WindowsFeature]ad-domain-services", "[ADDomain]thisDomain"
+            DependsOn           = "[ADDomain]thisDomain"
         }
 
         ADGroup 'GmsaGroup'
@@ -107,7 +111,7 @@ Configuration dc {
             MembersToInclude = @(
                 '${active_directory_netbios_name}\${app_ad_user}'
             )
-            DependsOn                = "[WindowsFeature]ad-domain-services", "[ADDomain]thisDomain"
+            DependsOn                = "[ADUser]${app_ad_user}"
         }
 
         ADKDSKey 'LabKDSRootKey'
@@ -115,7 +119,7 @@ Configuration dc {
             Ensure                   = 'Present'
             EffectiveTime            = ((get-date).addhours(-10))
             AllowUnsafeEffectiveTime = $true # Use with caution
-            DependsOn                = "[WindowsFeature]ad-domain-services", "[ADDomain]thisDomain"
+            DependsOn                = "[ADDomain]thisDomain"
         }
 
         ADManagedServiceAccount 'TestGmsaAccount'
@@ -124,7 +128,7 @@ Configuration dc {
             ServiceAccountName = '${gmsa_account_name}'
             AccountType        = 'Group'
             ManagedPasswordPrincipals = '${gmsa_group_name}'
-            DependsOn                = "[ADKDSKey]LabKDSRootKey", "[ADDomain]thisDomain", "[WindowsFeature]ad-domain-services"
+            DependsOn                = "[ADKDSKey]LabKDSRootKey"
 
         }
 
@@ -132,7 +136,7 @@ Configuration dc {
         {
             ServicePrincipalName = 'host/${gmsa_account_name}'
             Account              = '${gmsa_account_name}$'
-            DependsOn            = "[ADManagedServiceAccount]TestGmsaAccount", "[ADKDSKey]LabKDSRootKey", "[ADDomain]thisDomain", "[WindowsFeature]ad-domain-services"
+            DependsOn            = "[ADManagedServiceAccount]TestGmsaAccount"
         }       
     }
 }

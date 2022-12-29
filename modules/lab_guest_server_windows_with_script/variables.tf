@@ -42,7 +42,7 @@ variable "config_values" {
 }
 
 variable "cert_san_names" {
-  type = list(string)
+  type        = list(string)
   description = "List of SAN names for the machine dsc certificate"
-  default = []  
+  default     = []
 }
