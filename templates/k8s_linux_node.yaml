@@ -39,7 +39,7 @@ runcmd:
   - [ systemctl, enable, --now, containerd ]
   - runcversion=$(curl -SL https://api.github.com/repos/opencontainers/runc/releases/latest | jq -r ".tag_name")
   - wget "https://github.com/opencontainers/runc/releases/download/$${runcversion}/runc.amd64"
-  - [ install, -m, 755, runc.amd64, /usr/local/sbin/runc ]
+  - install -m 755 runc.amd64 /usr/local/sbin/runc 
   - cniversion=$(curl -SL https://api.github.com/repos/containernetworking/plugins/releases/latest | jq -r ".tag_name")
   - wget "https://github.com/containernetworking/plugins/releases/download/$${cniversion}/cni-plugins-linux-amd64-$${cniversion}.tgz"
   - [ mkdir, -p, /opt/cni/bin]
@@ -52,7 +52,13 @@ runcmd:
   - [ apt-get, install, -y, kubelet, kubeadm, kubectl ]
   - [ systemctl, restart, containerd.service ]
   - [ apt-mark, hold, kubelet, kubeadm, kubectl ]
-  - kubeadm join ${control_node_ip}:6443 --token ${node_token_value} --discovery-token-ca-cert-hash sha256:${node_token_hash}
+  # install the cli and get the secrets from the key vault
+  - curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+  - az login --identity --allow-no-subscriptions
+  - export CAHASH=$(az keyvault secret show --vault-name "${vault_name}" --name "${hash_name}" --query "value")
+  - CAHASH="$${CAHASH%\"}"
+  - CAHASH="$${CAHASH#\"}"
+  - kubeadm join ${control_node_ip}:6443 --token ${node_token_value} --discovery-token-ca-cert-hash sha256:$CAHASH
 
 
 

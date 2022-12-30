@@ -48,7 +48,7 @@ runcmd:
   - [ systemctl, enable, --now, containerd ]
   - runcversion=$(curl -SL https://api.github.com/repos/opencontainers/runc/releases/latest | jq -r ".tag_name")
   - wget "https://github.com/opencontainers/runc/releases/download/$${runcversion}/runc.amd64"
-  - [ install, -m, 755, runc.amd64, /usr/local/sbin/runc ]
+  - install -m 755 runc.amd64 /usr/local/sbin/runc 
   - cniversion=$(curl -SL https://api.github.com/repos/containernetworking/plugins/releases/latest | jq -r ".tag_name")
   - wget "https://github.com/containernetworking/plugins/releases/download/$${cniversion}/cni-plugins-linux-amd64-$${cniversion}.tgz"
   - [ mkdir, -p, /opt/cni/bin]
@@ -63,12 +63,22 @@ runcmd:
   - [ apt-mark, hold, kubelet, kubeadm, kubectl ]
   #bootstrap kubernetes control plane
   - kubeadm config images pull
-  - kubeadm init --pod-network-cidr=192.168.0.0/16
-  - kubeadm token create ${node_token_value} 
+  - kubeadm init --pod-network-cidr=192.168.0.0/16 --token ${node_token_value} 
   - export KUBECONFIG=/etc/kubernetes/admin.conf
   - calicoversion=$(curl -SL https://api.github.com/repos/projectcalico/calico/releases/latest | jq -r ".tag_name")
   - kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/$${calicoversion}/manifests/tigera-operator.yaml
   - kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/$${calicoversion}/manifests/custom-resources.yaml
+  #install and sign in the cli
+  - curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+  - az login --identity --allow-no-subscriptions
+  - export CAHASH=$(openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //')
+  - az keyvault secret set --vault-name "${vault_name}" --name "${hash_name}" --value $CAHASH
+  - export KVER=$(kubectl version -o json | jq '.serverVersion.gitVersion')
+  - az keyvault secret set --vault-name "${vault_name}" --name "${version_name}" --value $KVER
+  - az keyvault secret set --vault-name "${vault_name}" --name "${conf_secret_name}" --file /etc/kubernetes/admin.conf
+
+
+
 
  ##add this if needed?
 #curl -L https://raw.githubusercontent.com/kubernetes-sigs/sig-windows-tools/master/hostprocess/calico/kube-proxy/kube-proxy.yml | sed 's/KUBE_PROXY_VERSION/v1.25.3/g' | kubectl apply -f -

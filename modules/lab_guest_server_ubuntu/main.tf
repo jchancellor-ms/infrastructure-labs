@@ -58,7 +58,10 @@ resource "azurerm_linux_virtual_machine" "this" {
     storage_account_type = "Standard_LRS"
   }
 
-
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [var.vm_vault_identity]
+  }
 
   source_image_reference {
     publisher = "Canonical"
@@ -66,8 +69,8 @@ resource "azurerm_linux_virtual_machine" "this" {
     sku       = "22_04-lts-gen2"
     version   = "latest"
   }
-
 }
+
 
 #write secret to keyvault
 resource "azurerm_key_vault_secret" "admin_password" {

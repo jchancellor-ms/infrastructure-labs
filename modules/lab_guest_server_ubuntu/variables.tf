@@ -46,5 +46,10 @@ variable "template_filename" {
   description = "filename of the cloud-init template to use. Leaving this unset will default to an empty template empty.yaml"
   type        = string
   default     = "empty.yaml"
+}
 
+variable "vm_vault_identity" {
+  type        = string
+  description = "the azure resource id for the user managed identity for worker node secret read access"
+  default     = ""
 }

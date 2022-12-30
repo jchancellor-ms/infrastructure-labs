@@ -11,14 +11,18 @@ locals {
   bastion_name        = "${var.prefix}-bastion-${var.region}-${local.name_string_suffix}"
   ou_name             = "k8s"
   ou                  = "OU=${local.ou_name},${join(",", [for name in split(".", var.domain_fqdn) : "DC=${name}"])}"
+  vm_vault_identity   = "vm-vault-identity-${local.name_string_suffix}"
 
   config_values = {
     node_token_value = "${random_string.node_part1.result}.${random_string.node_part2.result}"
-    node_token_hash  = sha256("${random_string.node_part1.result}.${random_string.node_part2.result}")
+    vault_name       = local.keyvault_name
+    hash_name        = "${var.prefix}-ca-hash-${local.name_string_suffix}"
+    version_name     = "${var.prefix}-k8s-version-${local.name_string_suffix}"
     control_node_ip  = module.k8s_server.private_ip_address
   }
 
   config_values_windows = {
+    k8s_version = azurerm_key_vault_secret.k8s_version.value
     dsc_uri     = "https://raw.githubusercontent.com/jchancellor-ms/infrastructure-labs/main/templates/k8s_windows_dsc.ps1"
     dsc_outfile = "k8s_windows_dsc.ps1"
   }
@@ -146,29 +150,7 @@ resource "time_sleep" "wait_600_seconds" {
   create_duration = "600s"
 }
 
-###
-module "k8s_server" {
-  source = "../../modules/lab_guest_server_ubuntu"
-
-  rg_name           = azurerm_resource_group.lab_rg.name
-  rg_location       = azurerm_resource_group.lab_rg.location
-  subnet_id         = module.lab_spoke_virtual_network.subnet_ids["K8sSubnet"].id
-  vm_name           = local.k8s_vm_name
-  vm_sku            = "Standard_D4as_v5"
-  key_vault_id      = module.on_prem_keyvault_with_access_policy.keyvault_id
-  template_filename = "k8s.yaml"
-  #template_filename         = "empty.yaml"
-  config_values = local.config_values
-
-  depends_on = [
-    module.lab_dc,
-    time_sleep.wait_600_seconds,
-    module.on_prem_keyvault_with_access_policy
-  ]
-}
-
-
-
+### Create the kubernetes control node
 ##### generate the kubernetes node join config
 resource "random_string" "node_part1" {
   length  = 6
@@ -184,10 +166,63 @@ resource "random_string" "node_part2" {
   lower   = true
 }
 
+##create a user-assigned managed identity and provision it with secrets get and create writes on the keyvault
+resource "azurerm_user_assigned_identity" "vm_vault_identity" {
+  location            = azurerm_resource_group.lab_rg.location
+  name                = local.vm_vault_identity
+  resource_group_name = azurerm_resource_group.lab_rg.name
+}
 
-output "node_hash" {
-  value = local.config_values.node_token_hash
-  #sensitive = true
+resource "azurerm_key_vault_access_policy" "user_managed_identity_access" {
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+
+  tenant_id = azurerm_user_assigned_identity.vm_vault_identity.tenant_id
+  object_id = azurerm_user_assigned_identity.vm_vault_identity.principal_id
+
+  certificate_permissions = [
+    "Get", "Create", "Import", "List", "ListIssuers", "ManageContacts", "ManageIssuers", "Recover", "Restore", "SetIssuers", "Update"
+  ]
+
+  secret_permissions = [
+    "Get", "List", "Set", "Delete", "Backup", "Recover", "Restore"
+  ]
+}
+
+module "k8s_server" {
+  source = "../../modules/lab_guest_server_ubuntu"
+
+  rg_name           = azurerm_resource_group.lab_rg.name
+  rg_location       = azurerm_resource_group.lab_rg.location
+  subnet_id         = module.lab_spoke_virtual_network.subnet_ids["K8sSubnet"].id
+  vm_name           = local.k8s_vm_name
+  vm_sku            = "Standard_D4as_v5"
+  key_vault_id      = module.on_prem_keyvault_with_access_policy.keyvault_id
+  template_filename = "k8s.yaml"
+  #template_filename         = "empty.yaml"
+  config_values     = local.config_values
+  vm_vault_identity = azurerm_user_assigned_identity.vm_vault_identity.id
+
+  depends_on = [
+    module.lab_dc,
+    time_sleep.wait_600_seconds,
+    module.on_prem_keyvault_with_access_policy
+  ]
+}
+
+#allow time for the control pods to come up cleanly
+resource "time_sleep" "wait_300_seconds" {
+  depends_on = [module.k8s_server]
+
+  create_duration = "300s"
+}
+
+#get the kubernetes version installed on the control node
+data "azurerm_key_vault_secret" "k8s_version" {
+  name         = local.config_values.version_name
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+  depends_on = [
+    time_sleep.wait_300_seconds
+  ]
 }
 
 #create a second linux node and join it to the node pool.  (allows calico to run pods on a non control plane node?)
@@ -202,12 +237,14 @@ module "k8s_server_linux" {
   key_vault_id      = module.on_prem_keyvault_with_access_policy.keyvault_id
   template_filename = "k8s_linux_node.yaml"
   #template_filename         = "empty.yaml"
-  config_values = local.config_values
+  config_values     = local.config_values
+  vm_vault_identity = azurerm_user_assigned_identity.vm_vault_identity.id
 
   depends_on = [
     module.lab_dc,
     time_sleep.wait_600_seconds,
-    module.k8s_server
+    module.k8s_server,
+    time_sleep.wait_300_seconds
   ]
 }
 
@@ -219,19 +256,19 @@ resource "azurerm_availability_set" "windows_nodes" {
 }
 
 
-
 ### Deploy windows Node(s)
 module "windows_node_servers" {
   source = "../../modules/lab_guest_server_windows_with_script"
 
-  rg_name           = azurerm_resource_group.lab_rg.name
-  rg_location       = azurerm_resource_group.lab_rg.location
-  vm_name           = local.k8s_windows_vm_name
-  subnet_id         = module.lab_spoke_virtual_network.subnet_ids["K8sSubnet"].id
-  vm_sku            = "Standard_D4as_v5"
-  key_vault_id      = module.on_prem_keyvault_with_access_policy.keyvault_id
-  os_sku            = "2022-Datacenter"
-  template_filename = "k8s_windows_dsc.ps1"
+  rg_name      = azurerm_resource_group.lab_rg.name
+  rg_location  = azurerm_resource_group.lab_rg.location
+  vm_name      = local.k8s_windows_vm_name
+  subnet_id    = module.lab_spoke_virtual_network.subnet_ids["K8sSubnet"].id
+  vm_sku       = "Standard_D4as_v5"
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+  os_sku       = "2022-Datacenter"
+  #template_filename = "k8s_windows_dsc.ps1"
+  template_filename = "empty.ps1"
   config_values     = local.config_values_windows
   #availability_set_id       = azurerm_availability_set.windows_nodes.id
 
@@ -259,3 +296,5 @@ resource "azurerm_key_vault_secret" "gmsapassword" {
   key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
   depends_on   = [module.on_prem_keyvault_with_access_policy.keyvault_id]
 }
+
+
