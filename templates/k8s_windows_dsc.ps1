@@ -85,7 +85,7 @@ Configuration k8s {
         script 'joinToKubernetes' {
             GetScript            = { return @{result = 'Configuring for kubernetes' } }
             TestScript           = { 
-                if (get-service -Name kubelet){
+                if (get-service -Name kubelet -errorAction SilentlyContinue){
                     $return = $true
                 }
                 else {
@@ -105,14 +105,17 @@ Configuration k8s {
                 Invoke-WebRequest https://projectcalico.docs.tigera.io/scripts/install-calico-windows.ps1 -OutFile c:\install-calico-windows.ps1
                 #fix an issue where the findstr doesn't get the server info from the config
                 $findString = 'findstr https:// $KubeConfigPath'
-                $replaceString = '(Get-Content $KubeConfigPath | Select-String -Pattern "https://" ).ToString().Trim()'
+                $replaceString = '(Get-Content $KubeConfigPath | Select-String -Pattern "https://" )[0].ToString().Trim()'
                 ((Get-Content -path c:\install-calico-windows.ps1 -Raw) -replace [Regex]::Escape($findString), $replaceString) | set-content -path c:\install-calico-windows.ps1
                 #run the install script with the version and defaults
-                C:\install-calico-windows.ps1 -KubeVersion $k8sVersion -ServiceCidr 10.96.0.0/12 -DNSServerIPs 10.96.0.10
-                C:\CalicoWindows\kubernetes\install-kube-services.ps1
+                New-Item -Path 'c:\program files\containerd\cni\bin' -ItemType Directory -ErrorAction SilentlyContinue
+                C:\install-calico-windows.ps1 -KubeVersion $k8sVersion.split("v")[1].trim('"') -ServiceCidr 10.96.0.0/12 -DNSServerIPs 10.96.0.10                
+                C:\CalicoWindows\kubernetes\install-kube-services.ps1                
                 #modify c:\CalicoWindows\kubernetes\kubelet-service.ps1 to remove the deprecated logtostderr parameter that causes the service to bounce
                 $kubeletPath = "c:\CalicoWindows\kubernetes\kubelet-service.ps1"
                 (Get-Content $kubeletPath | Where-Object { $_ -notmatch 'logtostderr' }) | Set-Content $kubeletPath
+                Start-Service -Name kubelet
+                Start-Service -Name kube-proxy
                 #join the cluster
                 kubeadm join ${control_node_ip}:6443 --token ${node_token_value} --discovery-token-ca-cert-hash sha256:$certHash
             }
