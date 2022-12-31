@@ -1,5 +1,5 @@
 locals {
-  dc_config_values = merge(var.config_values, { admin_username = "azureuser", admin_password = random_password.userpass.result, dsc_cert_thumbprint = azurerm_key_vault_certificate.this.thumbprint })
+  config_values = merge(var.config_values, { admin_username = "azureuser", admin_password = random_password.userpass.result, dsc_cert_thumbprint = azurerm_key_vault_certificate.this.thumbprint, script_name = "${var.vm_name_1}-script" })
 }
 
 #deployment random value for naming
@@ -168,16 +168,24 @@ resource "azurerm_key_vault_certificate" "this" {
 }
 
 
-#generate the powershell and dsc template file for execution by the vm
-data "template_file" "configure_primary_dc" {
+data "template_file" "configure_node" {
   template = file("${path.module}/../../templates/${var.template_filename}")
-
-  vars = local.dc_config_values
+  vars     = local.config_values
 }
 
-data "template_file" "install_modules" {
+data "template_file" "run_script" {
   template = file("${path.module}/../../templates/dsc_modules.ps1")
+  vars     = local.config_values
 }
+
+#store the rendered script as a secret in the key vault
+resource "azurerm_key_vault_secret" "vmscript" {
+  name         = "${var.vm_name_1}-script"
+  value        = base64encode(data.template_file.configure_node.rendered)
+  key_vault_id = var.key_vault_id
+  depends_on   = [var.key_vault_id]
+}
+
 
 #TODO: Consider moving all of this to DSC instead of powershell 
 resource "azurerm_virtual_machine_extension" "configure_primary_dc" {
@@ -189,7 +197,7 @@ resource "azurerm_virtual_machine_extension" "configure_primary_dc" {
 
   protected_settings = <<PROTECTED_SETTINGS
     {
-        "commandToExecute": "powershell -command \"[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${base64encode(data.template_file.configure_primary_dc.rendered)}')) | Out-File -filepath configure_primary_dc.ps1\" && powershell -command \"[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${base64encode(data.template_file.install_modules.rendered)}')) | Out-File -filepath install_modules.ps1\" && powershell -ExecutionPolicy Unrestricted -File install_modules.ps1 && powershell -ExecutionPolicy Unrestricted -File configure_primary_dc.ps1"
+       "commandToExecute": "powershell -command \"[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${base64encode(data.template_file.run_script.rendered)}')) | Out-File -filepath run_script.ps1\" && powershell -ExecutionPolicy Unrestricted -File run_script.ps1"
     }
 PROTECTED_SETTINGS
 

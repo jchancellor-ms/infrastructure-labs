@@ -20,10 +20,13 @@ data "template_cloudinit_config" "config" {
 
 
 resource "random_password" "admin_password" {
-  length  = 20
-  special = false
-  upper   = true
-  lower   = true
+  length           = 20
+  special          = true
+  override_special = "_-!."
+  min_lower        = 2
+  min_numeric      = 2
+  min_upper        = 2
+  min_special      = 2
 }
 
 resource "azurerm_network_interface" "vm_nic" {

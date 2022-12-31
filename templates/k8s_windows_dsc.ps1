@@ -79,44 +79,42 @@ Configuration k8s {
                 .\containerd.exe --register-service
                 Start-Service containerd
             }
-        }
+        }       
 
-        #Install azCLI
-        script 'installAzCLI' {
-            GetScript            = { return @{result = 'Installing CLI' } }
+        #Configure Node using Calico teams scripts
+        script 'joinToKubernetes' {
+            GetScript            = { return @{result = 'Configuring for kubernetes' } }
             TestScript           = { 
-                New-Item -Path 'c:\temp' -ItemType Directory -ErrorAction SilentlyContinue
-                set-location -Path 'c:\temp'
-                az -v >> cliversion.txt   
-                if (Get-ChildItem -Path .\output.txt -Recurse | Select-String -Pattern 'azure-cli'){
+                if (get-service -Name kubelet){
                     $return = $true
                 }
                 else {
                     $return = $false
-                }             
+                }
+                #return $true  #stops run for now, check service statuses?
                 return $return
-            }
-            SetScript            = {                    
-                #move to the temp directory
-                New-Item -Path 'c:\temp' -ItemType Directory -ErrorAction SilentlyContinue
-                set-location -Path 'c:\temp'
-                $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi; Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'; rm .\AzureCLI.msi                
-                $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine")
-            }
-        }
-
-        #Configure Node using Calico script
-        script 'joinToKubernetes' {
-            GetScript            = { return @{result = 'Configuring for kubernetes' } }
-            TestScript           = { return $true } #stops run for now  
-        
+            }        
             SetScript            = {
                 New-Item -Path 'c:\k' -ItemType Directory -ErrorAction SilentlyContinue
                 set-location -Path 'c:\k'
-                az keyvault secret download --vault-name ${vault_name} --name ${conf_secret_name} --file c:\k\config
+                Connect-AzAccount -Identity | Out-Null
+                Get-AzKeyVaultSecret -vaultName ${vault_name} -Name ${conf_secret_name} -AsPlainText >> config
+                $certHash = Get-AzKeyVaultSecret -vaultName ${vault_name} -Name ${hash_name} -AsPlainText 
+                $k8sVersion = Get-AzKeyVaultSecret -vaultName ${vault_name} -Name ${version_name} -AsPlainText 
+                #Use the Calico created install script to configure the CNI
                 Invoke-WebRequest https://projectcalico.docs.tigera.io/scripts/install-calico-windows.ps1 -OutFile c:\install-calico-windows.ps1
-                C:\install-calico-windows.ps1 -KubeVersion 1.26.0 -ServiceCidr 10.96.0.0/12 -DNSServerIPs 10.96.0.10
+                #fix an issue where the findstr doesn't get the server info from the config
+                $findString = 'findstr https:// $KubeConfigPath'
+                $replaceString = '(Get-Content $KubeConfigPath | Select-String -Pattern "https://" ).ToString().Trim()'
+                ((Get-Content -path c:\install-calico-windows.ps1 -Raw) -replace [Regex]::Escape($findString), $replaceString) | set-content -path c:\install-calico-windows.ps1
+                #run the install script with the version and defaults
+                C:\install-calico-windows.ps1 -KubeVersion $k8sVersion -ServiceCidr 10.96.0.0/12 -DNSServerIPs 10.96.0.10
                 C:\CalicoWindows\kubernetes\install-kube-services.ps1
+                #modify c:\CalicoWindows\kubernetes\kubelet-service.ps1 to remove the deprecated logtostderr parameter that causes the service to bounce
+                $kubeletPath = "c:\CalicoWindows\kubernetes\kubelet-service.ps1"
+                (Get-Content $kubeletPath | Where-Object { $_ -notmatch 'logtostderr' }) | Set-Content $kubeletPath
+                #join the cluster
+                kubeadm join ${control_node_ip}:6443 --token ${node_token_value} --discovery-token-ca-cert-hash sha256:$certHash
             }
         }
 

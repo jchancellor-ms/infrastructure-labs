@@ -18,13 +18,18 @@ locals {
     vault_name       = local.keyvault_name
     hash_name        = "${var.prefix}-ca-hash-${local.name_string_suffix}"
     version_name     = "${var.prefix}-k8s-version-${local.name_string_suffix}"
+    conf_secret_name = "${var.prefix}-k8s-conf-${local.name_string_suffix}"
     control_node_ip  = module.k8s_server.private_ip_address
   }
 
   config_values_windows = {
-    k8s_version = azurerm_key_vault_secret.k8s_version.value
-    dsc_uri     = "https://raw.githubusercontent.com/jchancellor-ms/infrastructure-labs/main/templates/k8s_windows_dsc.ps1"
-    dsc_outfile = "k8s_windows_dsc.ps1"
+    k8s_version      = data.azurerm_key_vault_secret.k8s_version.value
+    node_token_value = "${random_string.node_part1.result}.${random_string.node_part2.result}"
+    vault_name       = local.keyvault_name
+    hash_name        = "${var.prefix}-ca-hash-${local.name_string_suffix}"
+    version_name     = "${var.prefix}-k8s-version-${local.name_string_suffix}"
+    conf_secret_name = "${var.prefix}-k8s-conf-${local.name_string_suffix}"
+    control_node_ip  = module.k8s_server.private_ip_address
   }
 
   config_values_dc = {
@@ -34,6 +39,7 @@ locals {
     app_ad_user_pass              = random_password.userpass.result
     gmsa_group_name               = "testgmsagroup"
     gmsa_account_name             = "testgmsaaccount"
+    vault_name                    = local.keyvault_name
 
   }
 }
@@ -70,7 +76,7 @@ module "lab_spoke_virtual_network" {
   subnets            = var.spoke_subnets
   tags               = var.tags
   is_spoke           = true
-  dns_servers        = [cidrhost(module.lab_hub_virtual_network.subnet_ids["DCSubnet"].address_prefixes[0], 100)]
+  dns_servers        = [cidrhost(module.lab_hub_virtual_network.subnet_ids["DCSubnet"].address_prefixes[0], 100), "168.63.129.16"]
 }
 
 #create peering to hub for spoke
@@ -260,22 +266,24 @@ resource "azurerm_availability_set" "windows_nodes" {
 module "windows_node_servers" {
   source = "../../modules/lab_guest_server_windows_with_script"
 
-  rg_name      = azurerm_resource_group.lab_rg.name
-  rg_location  = azurerm_resource_group.lab_rg.location
-  vm_name      = local.k8s_windows_vm_name
-  subnet_id    = module.lab_spoke_virtual_network.subnet_ids["K8sSubnet"].id
-  vm_sku       = "Standard_D4as_v5"
-  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
-  os_sku       = "2022-Datacenter"
-  #template_filename = "k8s_windows_dsc.ps1"
-  template_filename = "empty.ps1"
-  config_values     = local.config_values_windows
+  rg_name           = azurerm_resource_group.lab_rg.name
+  rg_location       = azurerm_resource_group.lab_rg.location
+  vm_name           = local.k8s_windows_vm_name
+  subnet_id         = module.lab_spoke_virtual_network.subnet_ids["K8sSubnet"].id
+  vm_sku            = "Standard_D4as_v5"
+  key_vault_id      = module.on_prem_keyvault_with_access_policy.keyvault_id
+  os_sku            = "2022-Datacenter"
+  template_filename = "k8s_windows_dsc.ps1"
+  #template_filename = "empty.ps1"
+  config_values = local.config_values_windows
   #availability_set_id       = azurerm_availability_set.windows_nodes.id
 
   depends_on = [
     module.lab_dc,
     module.on_prem_keyvault_with_access_policy,
-    time_sleep.wait_600_seconds
+    time_sleep.wait_600_seconds,
+    module.k8s_server,
+    time_sleep.wait_300_seconds
   ]
 }
 
