@@ -204,7 +204,7 @@ data "template_file" "credential_spec" {
   template = file("${path.module}/../../templates/credentialSpec.yaml")
   vars = merge(local.config_values_dc, {
     domain_sid       = data.azurerm_key_vault_secret.domain_sid.value,
-    domain_guid      = data.azurerm_key_vault_secret.domain_sid.value,
+    domain_guid      = data.azurerm_key_vault_secret.domain_guid.value,
     user_assigned_mi = azurerm_user_assigned_identity.vm_vault_identity.principal_id,
   secret_url = azurerm_key_vault_secret.gmsa_user_cred.versionless_id })
 }

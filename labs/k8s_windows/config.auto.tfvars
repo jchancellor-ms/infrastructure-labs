@@ -1,6 +1,6 @@
 prefix             = "k8slab"
 region             = "westus3"
-name_string_suffix = "c7"
+name_string_suffix = "c8"
 
 hub_vnet_address_space = ["10.15.0.0/16"]
 hub_subnets = [

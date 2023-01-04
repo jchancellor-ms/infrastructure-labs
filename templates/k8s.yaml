@@ -82,9 +82,12 @@ runcmd:
   ###Configure the webhooks using the generic defaults
   - wget "https://raw.githubusercontent.com/kubernetes-sigs/windows-gmsa/master/admission-webhook/deploy/deploy-gmsa-webhook.sh" 
   - chmod 755 deploy-gmsa-webhook.sh
-  - ./deploy-gmsa-webhook.sh -f /etc/kubernetes/manifests/gmsa-webhook.yaml
+  - ./deploy-gmsa-webhook.sh --file /etc/kubernetes/manifests/gmsa-webhook.yaml
   #get the populated credential spec template and apply
-  - az keyvault secret show --vault-name "${vault_name}" --name "credential-spec" --query value | base64 --decode | tee -a credential_spec.yaml
+  - export CREDSPEC=$(az keyvault secret show --vault-name "${vault_name}" --name "${hash_name}" --query "value")
+  - CREDSPEC="$${CREDSPEC%\"}"
+  - CREDSPEC="$${CREDSPEC#\"}"
+  - echo $CREDSPEC | base64 --decode | tee -a credential_spec.yaml
   - kubectl -apply -f credential_spec.yaml
 
 
