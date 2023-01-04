@@ -126,15 +126,15 @@ Configuration k8s {
             GetScript            = { return @{result = 'Installing GMSA CCG Plugin' } }
             TestScript           = { 
                 #check to see if the new reg key exists
-                if ((Get-ChildItem -Path 'HKLM:\SOFTWARE\CLASSES\CLSID\{CCC2A336-D7F3-4818-A213-272B7924213E}' -ErrorAction SilentlyContinue).count -ne 2) { 
+                if ((Get-ChildItem -Path 'HKLM:\SOFTWARE\CLASSES\CLSID\{CCC2A336-D7F3-4818-A213-272B7924213E}' -ErrorAction SilentlyContinue).valuecount -ne 2) { 
                     $return = $false 
                 }
                 else {
                     $return = $true
                 }
                 
-                #return $return 
-                return $true
+                return $return 
+                #return $true
             }
             SetScript            = {                    
                 #Patterned after file found here - https://github.com/kubernetes-sigs/image-builder/blob/master/images/capi/ansible/windows/roles/gmsa/tasks/gmsa_keyvault.yml
@@ -148,8 +148,9 @@ Configuration k8s {
                 #copy keyvault plugin to system32
                 set-location -path 'c:\temp\gmsa'
                 Move-Item -Force -Path .\CCGAKVPlugin.dll -Destination "$ENV:Systemroot\system32\"
+                Invoke-webRequest -Uri https://raw.githubusercontent.com/kubernetes-sigs/image-builder/master/images/capi/ansible/windows/roles/gmsa/files/install-gmsa-keyvault-plugin.ps1 -outfile .\install-gmsa-keyvault-plugin.ps1
                 #Register the key vault CCG plugin                
-                install-gmsa-keyvault-plugin.ps1
+                c:\temp\gmsa\install-gmsa-keyvault-plugin.ps1
                 #Install the logging manifests
                 wevtutil.exe um .\CCGEvents.man
                 wevtutil.exe im .\CCGEvents.man

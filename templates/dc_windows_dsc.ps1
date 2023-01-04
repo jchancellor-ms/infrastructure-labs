@@ -88,7 +88,42 @@ Configuration dc {
             DomainMode                    = 'WinThreshold'
             DomainNetBiosName             = '${active_directory_netbios_name}'
             DependsOn                     = "[WindowsFeature]ad-domain-services"
-        }        
+        } 
+        
+        WaitForADDomain 'thisDomain'
+        {
+            DomainName = '${active_directory_domain}'
+        }
+
+
+        #write the domain values to the key vault to populate the credential spec template later
+        script 'uploadDomainInfoToKeyVault' {
+            DependsOn            = "[WaitForADDomain]thisDomain"
+            GetScript            = { return @{result = 'Writing Domain GUID and SID to keyvault' } }
+            TestScript           = { 
+                Connect-AzAccount -Identity | Out-Null
+                $domainInfo = get-AdDomain -errorAction SilentlyContinue
+                $Sid = Get-AzKeyVaultSecret -vaultName "${vault_name}" -Name "domain-sid" -AsPlainText -errorAction SilentlyContinue
+                $Guid = Get-AzKeyVaultSecret -vaultName "${vault_name}" -Name "domain-guid" -AsPlainText -errorAction SilentlyContinue
+                if (($domainInfo.DomainSid.value.toUpper() -ne $Sid) -or ($domainInfo.ObjectGuid.Guid.toUpper() -ne $Guid)) { 
+                    $return = $false 
+                }
+                else {
+                    $return = $true
+                }
+                
+                return $return 
+                #return $true
+            }
+            SetScript            = {                    
+                Connect-AzAccount -Identity | Out-Null
+                $domainInfo = get-AdDomain
+                $Sid = convertTo-SecureString -String $domainInfo.DomainSid.value.toUpper() -AsPlainText -Force
+                $Guid = convertTo-SecureString -String $domainInfo.ObjectGuid.Guid.toUpper -AsPlainText -Force
+                Set-AzKeyVaultSecret -vaultName "${vault_name}" -Name "domain-sid" -SecretValue $Sid
+                Set-AzKeyVaultSecret -vaultName "${vault_name}" -Name "domain-guid" -SecretValue $Guid
+            }
+        }
 
         ADUser '${app_ad_user}'
         {
@@ -98,7 +133,7 @@ Configuration dc {
             PasswordNeverResets = $true
             DomainName          = '${active_directory_domain}'
             Path                = 'CN=Users,DC=${active_directory_netbios_name},DC=com'
-            DependsOn           = "[ADDomain]thisDomain"
+            DependsOn           = "[WaitForADDomain]thisDomain"
         }
 
         ADGroup 'GmsaGroup'
@@ -119,7 +154,7 @@ Configuration dc {
             Ensure                   = 'Present'
             EffectiveTime            = ((get-date).addhours(-10))
             AllowUnsafeEffectiveTime = $true # Use with caution
-            DependsOn                = "[ADDomain]thisDomain"
+            DependsOn                = "[WaitForADDomain]thisDomain"
         }
 
         ADManagedServiceAccount 'TestGmsaAccount'
@@ -138,6 +173,7 @@ Configuration dc {
             Account              = '${gmsa_account_name}$'
             DependsOn            = "[ADManagedServiceAccount]TestGmsaAccount"
         }       
+        
     }
 }
 

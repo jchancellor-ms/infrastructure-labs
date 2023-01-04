@@ -148,30 +148,6 @@ module "lab_dc" {
     module.on_prem_keyvault_with_access_policy
   ]
 }
-
-#wait for the dc to build and reboot
-resource "time_sleep" "wait_600_seconds" {
-  depends_on = [module.lab_dc]
-
-  create_duration = "600s"
-}
-
-### Create the kubernetes control node
-##### generate the kubernetes node join config
-resource "random_string" "node_part1" {
-  length  = 6
-  special = false
-  upper   = false
-  lower   = true
-}
-
-resource "random_string" "node_part2" {
-  length  = 16
-  special = false
-  upper   = false
-  lower   = true
-}
-
 ##create a user-assigned managed identity and provision it with secrets get and create writes on the keyvault
 resource "azurerm_user_assigned_identity" "vm_vault_identity" {
   location            = azurerm_resource_group.lab_rg.location
@@ -194,6 +170,78 @@ resource "azurerm_key_vault_access_policy" "user_managed_identity_access" {
   ]
 }
 
+
+#Build the credentialSpec template and upload it to the key vault
+#add the general user credential to the vault for use in the template
+resource "azurerm_key_vault_secret" "gmsa_user_cred" {
+  name         = "gmsa-user"
+  value        = "${local.config_values_dc.active_directory_domain}\\${local.config_values_dc.app_ad_user}:${random_password.userpass.result}"
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+}
+
+#get the SID and GUID values and merge with the existing local values
+data "azurerm_key_vault_secret" "domain_sid" {
+  name         = "domain-sid"
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+  depends_on = [
+    module.lab_dc,
+    time_sleep.wait_600_seconds,
+    module.on_prem_keyvault_with_access_policy
+  ]
+}
+
+data "azurerm_key_vault_secret" "domain_guid" {
+  name         = "domain-guid"
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+  depends_on = [
+    module.lab_dc,
+    time_sleep.wait_600_seconds,
+    module.on_prem_keyvault_with_access_policy
+  ]
+}
+
+data "template_file" "credential_spec" {
+  template = file("${path.module}/../../templates/credentialSpec.yaml")
+  vars = merge(local.config_values_dc, {
+    domain_sid       = data.azurerm_key_vault_secret.domain_sid.value,
+    domain_guid      = data.azurerm_key_vault_secret.domain_sid.value,
+    user_assigned_mi = azurerm_user_assigned_identity.vm_vault_identity.principal_id,
+  secret_url = azurerm_key_vault_secret.gmsa_user_cred.versionless_id })
+}
+
+#store the rendered script as a secret in the key vault
+resource "azurerm_key_vault_secret" "credential_spec" {
+  name         = "credential-spec"
+  value        = base64encode(data.template_file.credential_spec.rendered)
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+}
+
+
+#wait for the dc to build and reboot
+resource "time_sleep" "wait_600_seconds" {
+  depends_on = [module.lab_dc]
+
+  create_duration = "900s"
+}
+
+### Create the kubernetes control node
+##### generate the kubernetes node join config
+resource "random_string" "node_part1" {
+  length  = 6
+  special = false
+  upper   = false
+  lower   = true
+}
+
+resource "random_string" "node_part2" {
+  length  = 16
+  special = false
+  upper   = false
+  lower   = true
+}
+
+
+
 module "k8s_server" {
   source = "../../modules/lab_guest_server_ubuntu"
 
@@ -211,7 +259,8 @@ module "k8s_server" {
   depends_on = [
     module.lab_dc,
     time_sleep.wait_600_seconds,
-    module.on_prem_keyvault_with_access_policy
+    module.on_prem_keyvault_with_access_policy,
+    azurerm_key_vault_secret.credential_spec
   ]
 }
 

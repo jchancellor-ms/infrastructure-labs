@@ -76,6 +76,18 @@ runcmd:
   - export KVER=$(kubectl version -o json | jq '.serverVersion.gitVersion')
   - az keyvault secret set --vault-name "${vault_name}" --name "${version_name}" --value $KVER
   - az keyvault secret set --vault-name "${vault_name}" --name "${conf_secret_name}" --file /etc/kubernetes/admin.conf
+  #configure the cluster to allow for use of GMSA - https://kubernetes.io/docs/tasks/configure-pod-container/configure-gmsa/
+  ###Install the CRD
+  - kubectl apply -f "https://raw.githubusercontent.com/kubernetes-sigs/windows-gmsa/master/admission-webhook/deploy/gmsa-crd.yml"
+  ###Configure the webhooks using the generic defaults
+  - wget "https://raw.githubusercontent.com/kubernetes-sigs/windows-gmsa/master/admission-webhook/deploy/deploy-gmsa-webhook.sh" 
+  - chmod 755 deploy-gmsa-webhook.sh
+  - ./deploy-gmsa-webhook.sh -f /etc/kubernetes/manifests/gmsa-webhook.yaml
+  #get the populated credential spec template and apply
+  - az keyvault secret show --vault-name "${vault_name}" --name "credential-spec" --query value | base64 --decode | tee -a credential_spec.yaml
+  - kubectl -apply -f credential_spec.yaml
+
+
 
 
 
