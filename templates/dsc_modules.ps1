@@ -10,6 +10,7 @@ Install-Module -Name SecurityPolicyDsc -Force -AllowClobber
 Install-Module -Name ComputerManagementDsc -Force -AllowClobber
 Install-Module -Name CredentialSpec -Force -AllowClobber
 install-module -Name 7zip4Powershell -MinimumVersion 2.0.0 -Force
+Install-Module -Name DockerMsftProvider -Repository PSGallery -Force
 
 #install the CLI
 New-Item -Path 'c:\temp' -ItemType Directory -ErrorAction SilentlyContinue

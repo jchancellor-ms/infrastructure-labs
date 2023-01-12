@@ -60,15 +60,30 @@ Configuration k8s {
             GetScript            = { return @{result = 'Installing Containerd' } }
             TestScript           = { 
                 #check to see if the containerd service is responding
-                return (Test-Path "//./pipe/containerd-containerd") 
-                #return $true
+                #return (Test-Path "//./pipe/containerd-containerd") 
+                return $true
             }
             SetScript            = {                    
                 #move to the temp directory
                 New-Item -Path 'c:\temp' -ItemType Directory -ErrorAction SilentlyContinue
                 set-location -Path 'c:\temp'
-                Invoke-WebRequest -UseBasicParsing "https://raw.githubusercontent.com/microsoft/Windows-Containers/Main/helpful_tools/Install-ContainerdRuntime/install-containerd-runtime.ps1" -o install-containerd-runtime.ps1
-                .\install-containerd-runtime.ps1
+                #get the latest release version number for use in the download
+                $latest = ((Invoke-WebRequest -Uri https://api.github.com/repos/containerd/containerd/releases/latest -UseBasicParsing).content | convertfrom-json).tag_name
+                $latestnum = $latest.substring(1)
+                #download and extract the installation files
+                curl.exe -L https://github.com/containerd/containerd/releases/download/$latest/containerd-$latestnum-windows-amd64.tar.gz -o containerd-windows-amd64.tar.gz -s
+                tar.exe xf .\containerd-windows-amd64.tar.gz
+                Copy-Item -Path ".\bin\" -Destination "$Env:ProgramFiles\containerd" -Recurse -Force
+                #configure and start the containerd service
+                cd $Env:ProgramFiles\containerd\
+                .\containerd.exe config default | Out-File config.toml -Encoding ascii
+                .\containerd.exe --register-service
+                Start-Service containerd
+                #install crictl
+                curl.exe -o crictl.tgz -LO "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.23.0/crictl-v1.23.0-windows-amd64.tar.gz"
+                tar -xvf crictl.tgz -C "C:\Program Files\containerd"
+                [Environment]::SetEnvironmentVariable("Path", "$($env:path);C:\Program Files\containerd", [System.EnvironmentVariableTarget]::Machine)
+                $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine")
             }
         }       
 
@@ -82,8 +97,8 @@ Configuration k8s {
                 else {
                     $return = $false
                 }
-                #return $true  #stops run for now, check service statuses?
-                return $return
+                return $true  #stops run for now, check service statuses?
+                #return $return
             }        
             SetScript            = {
                 New-Item -Path 'c:\k' -ItemType Directory -ErrorAction SilentlyContinue
@@ -98,19 +113,18 @@ Configuration k8s {
                 $findString = 'findstr https:// $KubeConfigPath'
                 $replaceString = '(Get-Content $KubeConfigPath | Select-String -Pattern "https://" )[0].ToString().Trim()'
                 ((Get-Content -path c:\install-calico-windows.ps1 -Raw) -replace [Regex]::Escape($findString), $replaceString) | set-content -path c:\install-calico-windows.ps1
-                #set the containerd file locations so the calico script won't fail
-                $Env:CNI_BIN_DIR = "c:\program files\containerd\cni\bin"
-                $Env:CNI_CONF_DIR = "c:\program files\containerd\cni\conf"   
-                #run the calico install script
-                C:\install-calico-windows.ps1 -KubeVersion $k8sVersion.split("v")[1].trim('"') -ServiceCidr "10.96.0.0/12" -DNSServerIPs "10.96.0.10" -CalicoBackend vxlan                
+                #run the install script with the version and defaults
+                New-Item -Path 'c:\program files\containerd\cni\bin' -ItemType Directory -ErrorAction SilentlyContinue
+                C:\install-calico-windows.ps1 -KubeVersion $k8sVersion.split("v")[1].trim('"') -ServiceCidr 10.96.0.0/12 -DNSServerIPs 10.96.0.10                
                 C:\CalicoWindows\kubernetes\install-kube-services.ps1                
                 #modify c:\CalicoWindows\kubernetes\kubelet-service.ps1 to remove the deprecated logtostderr parameter that causes the service to bounce
                 $kubeletPath = "c:\CalicoWindows\kubernetes\kubelet-service.ps1"
                 (Get-Content $kubeletPath | Where-Object { $_ -notmatch 'logtostderr' }) | Set-Content $kubeletPath
                 Start-Service -Name kubelet
                 Start-Service -Name kube-proxy
+                #join the cluster
+                kubeadm join ${control_node_ip}:6443 --token ${node_token_value} --discovery-token-ca-cert-hash sha256:$certHash
             }
-
         }
 
 
