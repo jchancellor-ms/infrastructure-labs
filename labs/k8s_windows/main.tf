@@ -177,6 +177,7 @@ resource "azurerm_key_vault_secret" "gmsa_user_cred" {
   name         = "gmsa-user"
   value        = "${local.config_values_dc.active_directory_domain}\\${local.config_values_dc.app_ad_user}:${random_password.userpass.result}"
   key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+  depends_on   = [module.on_prem_keyvault_with_access_policy]
 }
 
 #get the SID and GUID values and merge with the existing local values
@@ -351,7 +352,7 @@ resource "azurerm_key_vault_secret" "gmsapassword" {
   name         = "testgmsaapp-password"
   value        = random_password.userpass.result
   key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
-  depends_on   = [module.on_prem_keyvault_with_access_policy.keyvault_id]
+  depends_on   = [module.on_prem_keyvault_with_access_policy]
 }
 
 

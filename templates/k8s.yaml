@@ -76,20 +76,21 @@ runcmd:
   - export KVER=$(kubectl version -o json | jq '.serverVersion.gitVersion')
   - az keyvault secret set --vault-name "${vault_name}" --name "${version_name}" --value $KVER
   - az keyvault secret set --vault-name "${vault_name}" --name "${conf_secret_name}" --file /etc/kubernetes/admin.conf
+  - [ kubectl, patch, ipamconfigurations, default, --type, merge, "--patch=\u0027{\u0022spec\u0022: {\u0022strictAffinity\u0022: true}}\u0027" ]
   #configure the cluster for windows nodes on calico
   #configure the cluster to allow for use of GMSA - https://kubernetes.io/docs/tasks/configure-pod-container/configure-gmsa/
   ###Install the CRD
-  #- kubectl apply -f "https://raw.githubusercontent.com/kubernetes-sigs/windows-gmsa/master/admission-webhook/deploy/gmsa-crd.yml"
+  - kubectl apply -f "https://raw.githubusercontent.com/kubernetes-sigs/windows-gmsa/master/admission-webhook/deploy/gmsa-crd.yml"
   ###Configure the webhooks using the generic defaults
-  #- wget "https://raw.githubusercontent.com/kubernetes-sigs/windows-gmsa/master/admission-webhook/deploy/deploy-gmsa-webhook.sh" 
-  #- chmod 755 deploy-gmsa-webhook.sh
-  #- ./deploy-gmsa-webhook.sh --file /etc/kubernetes/manifests/gmsa-webhook.yaml --tolerate-master --overwrite
+  - wget "https://raw.githubusercontent.com/kubernetes-sigs/windows-gmsa/master/admission-webhook/deploy/deploy-gmsa-webhook.sh" 
+  - chmod 755 deploy-gmsa-webhook.sh
+  - ./deploy-gmsa-webhook.sh --file /etc/kubernetes/manifests/gmsa-webhook.yaml --tolerate-master --overwrite
   #get the populated credential spec template and apply
-  #- export CREDSPEC=$(az keyvault secret show --vault-name "${vault_name}" --name "credential-spec" --query "value")
-  #- CREDSPEC="$${CREDSPEC%\"}"
-  #- CREDSPEC="$${CREDSPEC#\"}"
-  #- echo $CREDSPEC | base64 --decode | tee -a credential_spec.yaml
-  #- kubectl -apply -f credential_spec.yaml
+  - export CREDSPEC=$(az keyvault secret show --vault-name "${vault_name}" --name "credential-spec" --query "value")
+  - CREDSPEC="$${CREDSPEC%\"}"
+  - CREDSPEC="$${CREDSPEC#\"}"
+  - echo $CREDSPEC | base64 --decode | tee -a credential_spec.yaml
+  - kubectl -apply -f credential_spec.yaml
 
 
 

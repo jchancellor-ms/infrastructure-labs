@@ -109,8 +109,9 @@ Configuration k8s {
                 (Get-Content $kubeletPath | Where-Object { $_ -notmatch 'logtostderr' }) | Set-Content $kubeletPath
                 Start-Service -Name kubelet
                 Start-Service -Name kube-proxy
+                $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine")
+                c:\k\kubectl patch ipamconfigurations default --type merge --patch='{"""spec""": {"""strictAffinity""": true}}'
             }
-
         }
 
 
@@ -125,8 +126,8 @@ Configuration k8s {
                     $return = $true
                 }
                 
-                #return $return 
-                return $true
+                return $return 
+                #return $true
             }
             SetScript            = {                    
                 #Patterned after file found here - https://github.com/kubernetes-sigs/image-builder/blob/master/images/capi/ansible/windows/roles/gmsa/tasks/gmsa_keyvault.yml
