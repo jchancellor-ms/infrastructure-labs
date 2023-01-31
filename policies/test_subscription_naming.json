@@ -1,0 +1,69 @@
+{
+    "mode": "All",
+    "policyRule": {
+        "if": {
+            "allOf": [
+                {
+                    "field": "type",
+                    "equals": "Microsoft.Resources/subscriptions/resourceGroups"
+                },
+                {
+                    "anyOf": [
+                        {
+                            "allOf": [
+                                {
+                                    "value": "[toLower(substring(subscription().displayName, 0, 3))]",
+                                    "equals": "zne"
+                                },
+                                {
+                                    "field": "location",
+                                    "notEquals": "North Europe"
+                                }
+                            ]
+                        },
+                        {
+                            "allOf": [
+                                {
+                                    "value": "[toLower(substring(subscription().displayName, 0, 3))]",
+                                    "equals": "zwe"
+                                },
+                                {
+                                    "field": "location",
+                                    "notEquals": "West Europe"
+                                }
+                            ]
+                        },
+                        {
+                            "allOf": [
+                                {
+                                    "value": "[toLower(substring(subscription().displayName, 0, 3))]",
+                                    "equals": "znc"
+                                },
+                                {
+                                    "field": "location",
+                                    "notEquals": "North Central US"
+                                }
+                            ]
+                        },
+                        {
+                            "allOf": [
+                                {
+                                    "value": "[toLower(substring(subscription().displayName, 0, 3))]",
+                                    "equals": "zsc"
+                                },
+                                {
+                                    "field": "location",
+                                    "notEquals": "South Central US"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "then": {
+            "effect": "deny"
+        }
+    },
+    "parameters": {}
+}
