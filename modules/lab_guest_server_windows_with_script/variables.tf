@@ -25,6 +25,11 @@ variable "key_vault_id" {
   description = "The resource ID for the key vault where the virtual machine secrets will be deployed"
 }
 
+variable "keyvault_name" {
+  type        = string
+  description = "The name of the keyvault where the config file template output will be stored"
+}
+
 variable "os_sku" {
   type        = string
   description = "The OS sku value for the windows server"

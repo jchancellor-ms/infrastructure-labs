@@ -1,5 +1,5 @@
 locals {
-  config_values = merge(var.config_values, { admin_username = "azureuser", admin_password = random_password.userpass.result, dsc_cert_thumbprint = azurerm_key_vault_certificate.this.thumbprint, script_name = "${var.vm_name}-script" })
+  config_values = merge(var.config_values, { vault_name = var.keyvault_name, admin_username = "azureuser", admin_password = random_password.userpass.result, dsc_cert_thumbprint = azurerm_key_vault_certificate.this.thumbprint, script_name = "${var.vm_name}-script" })
 }
 
 resource "random_string" "resources" {

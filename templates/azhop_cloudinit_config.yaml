@@ -1,0 +1,7 @@
+#cloud-config
+write_files:
+- encoding: b64
+  content: ${file_content}
+  path: /tmp/config.yml
+  owner: root:root
+  permissions: '0777'

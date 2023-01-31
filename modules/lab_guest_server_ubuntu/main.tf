@@ -62,7 +62,7 @@ resource "azurerm_linux_virtual_machine" "this" {
   }
 
   identity {
-    type         = "UserAssigned"
+    type         = "SystemAssigned, UserAssigned"
     identity_ids = [var.vm_vault_identity]
   }
 

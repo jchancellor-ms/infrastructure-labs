@@ -25,7 +25,6 @@ locals {
   config_values_windows = {
     k8s_version      = data.azurerm_key_vault_secret.k8s_version.value
     node_token_value = "${random_string.node_part1.result}.${random_string.node_part2.result}"
-    vault_name       = local.keyvault_name
     hash_name        = "${var.prefix}-ca-hash-${local.name_string_suffix}"
     version_name     = "${var.prefix}-k8s-version-${local.name_string_suffix}"
     conf_secret_name = "${var.prefix}-k8s-conf-${local.name_string_suffix}"
@@ -38,8 +37,7 @@ locals {
     app_ad_user                   = "testgmsaapp"
     app_ad_user_pass              = random_password.userpass.result
     gmsa_group_name               = "testgmsagroup"
-    gmsa_account_name             = "testgmsaaccount"
-    vault_name                    = local.keyvault_name
+    gmsa_account_name             = "testgmsaaccount"  
 
   }
 }
@@ -139,6 +137,7 @@ module "lab_dc" {
   subnet_id            = module.lab_hub_virtual_network.subnet_ids["DCSubnet"].id
   vm_sku               = "Standard_D4as_v5"
   key_vault_id         = module.on_prem_keyvault_with_access_policy.keyvault_id
+  keyvault_name        = local.keyvault_name
   private_ip_address_1 = cidrhost(module.lab_hub_virtual_network.subnet_ids["DCSubnet"].address_prefixes[0], 100)
   availability_set_id  = azurerm_availability_set.domain_controllers.id
   config_values        = local.config_values_dc
@@ -327,6 +326,7 @@ module "windows_node_servers" {
   #template_filename = "empty.ps1"
   config_values = local.config_values_windows
   #availability_set_id       = azurerm_availability_set.windows_nodes.id
+  keyvault_name    = local.keyvault_name
 
   depends_on = [
     module.lab_dc,
