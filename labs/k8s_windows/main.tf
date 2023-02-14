@@ -37,7 +37,7 @@ locals {
     app_ad_user                   = "testgmsaapp"
     app_ad_user_pass              = random_password.userpass.result
     gmsa_group_name               = "testgmsagroup"
-    gmsa_account_name             = "testgmsaaccount"  
+    gmsa_account_name             = "testgmsaaccount"
 
   }
 }
@@ -326,7 +326,7 @@ module "windows_node_servers" {
   #template_filename = "empty.ps1"
   config_values = local.config_values_windows
   #availability_set_id       = azurerm_availability_set.windows_nodes.id
-  keyvault_name    = local.keyvault_name
+  keyvault_name = local.keyvault_name
 
   depends_on = [
     module.lab_dc,

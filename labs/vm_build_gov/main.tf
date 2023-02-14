@@ -1,18 +1,18 @@
 locals {
-  name_string_suffix  = var.name_string_suffix
-  resource_group_name = "${var.prefix}-rg-${var.region}-${local.name_string_suffix}"
-  keyvault_name       = "${var.prefix}-kv-${var.region}-${local.name_string_suffix}"
-  la_name             = "${var.prefix}-la-${var.region}-${local.name_string_suffix}"
-  aa_vault_identity   = "aa-vault-identity-${local.name_string_suffix}"
-  aa_name             = "${var.prefix}-aa-${var.region}-${local.name_string_suffix}"
-  aa_diag_name        = "${var.prefix}-aa-diags-${var.region}-${local.name_string_suffix}"
+  name_string_suffix       = var.name_string_suffix
+  resource_group_name      = "${var.prefix}-rg-${var.region}-${local.name_string_suffix}"
+  keyvault_name            = "${var.prefix}-kv-${var.region}-${local.name_string_suffix}"
+  la_name                  = "${var.prefix}-la-${var.region}-${local.name_string_suffix}"
+  aa_vault_identity        = "aa-vault-identity-${local.name_string_suffix}"
+  aa_name                  = "${var.prefix}-aa-${var.region}-${local.name_string_suffix}"
+  aa_diag_name             = "${var.prefix}-aa-diags-${var.region}-${local.name_string_suffix}"
   resource_group_name_test = "${var.prefix}-rg-test-${var.region}-${local.name_string_suffix}"
-  hub_vnet_name       = "${var.prefix}-vnet-hub-${var.region}-${local.name_string_suffix}"
-  spoke_vnet_name     = "${var.prefix}-vnet-spoke-${var.region}-${local.name_string_suffix}"
-  dc_vm_name          = "dc-${var.region}-${local.name_string_suffix}"
-  test_windows_vm_name    = "t1-${var.region}-${local.name_string_suffix}"
-  config_values_windows = {}
-  
+  hub_vnet_name            = "${var.prefix}-vnet-hub-${var.region}-${local.name_string_suffix}"
+  spoke_vnet_name          = "${var.prefix}-vnet-spoke-${var.region}-${local.name_string_suffix}"
+  dc_vm_name               = "dc-${var.region}-${local.name_string_suffix}"
+  test_windows_vm_name     = "t1-${var.region}-${local.name_string_suffix}"
+  config_values_windows    = {}
+
 
 }
 
@@ -104,14 +104,14 @@ resource "azurerm_automation_account" "lab_automation_account" {
   sku_name            = "Basic"
 
   identity {
-    type = "UserAssigned"
-    identity_ids = [ azurerm_user_assigned_identity.aa_vault_identity.id]
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.aa_vault_identity.id]
   }
 
   encryption {
     user_assigned_identity_id = azurerm_user_assigned_identity.aa_vault_identity.id
-    key_source       = "Microsoft.Keyvault"
-    key_vault_key_id = azurerm_key_vault_key.dsc_key.id
+    key_source                = "Microsoft.Keyvault"
+    key_vault_key_id          = azurerm_key_vault_key.dsc_key.id
   }
 
   tags = var.tags
@@ -205,7 +205,7 @@ module "windows_node_servers" {
   os_sku            = "2022-Datacenter"
   template_filename = "empty.ps1"
   config_values     = local.config_values_windows
-  keyvault_name    = local.keyvault_name
+  keyvault_name     = local.keyvault_name
 
   depends_on = [
     module.on_prem_keyvault_with_access_policy

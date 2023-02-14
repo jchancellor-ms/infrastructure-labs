@@ -18,7 +18,7 @@ locals {
   }
 
   config_values_deployer = {
-    file_content = base64encode(data.template_file.cloud_init_config.rendered)    
+    file_content = base64encode(data.template_file.cloud_init_config.rendered)
   }
 }
 
@@ -132,10 +132,10 @@ module "lab_dc" {
 module "log_analytics" {
   source = "../../modules/azure_log_analytics_simple"
 
-  rg_name = azurerm_resource_group.lab_rg.name
+  rg_name     = azurerm_resource_group.lab_rg.name
   rg_location = azurerm_resource_group.lab_rg.location
-  la_name = local.la_name
-  tags = var.tags
+  la_name     = local.la_name
+  tags        = var.tags
 }
 
 resource "azurerm_user_assigned_identity" "vm_vault_identity" {
@@ -148,12 +148,12 @@ resource "azurerm_user_assigned_identity" "vm_vault_identity" {
 module "deployer_linux" {
   source = "../../modules/lab_guest_server_ubuntu"
 
-  rg_name           = azurerm_resource_group.lab_rg.name
-  rg_location       = azurerm_resource_group.lab_rg.location
-  subnet_id         = module.lab_hub_virtual_network.subnet_ids["DCSubnet"].id
-  vm_name           = local.deployer_vm_name
-  vm_sku            = "Standard_D4as_v5"
-  key_vault_id      = module.on_prem_keyvault_with_access_policy.keyvault_id
+  rg_name      = azurerm_resource_group.lab_rg.name
+  rg_location  = azurerm_resource_group.lab_rg.location
+  subnet_id    = module.lab_hub_virtual_network.subnet_ids["DCSubnet"].id
+  vm_name      = local.deployer_vm_name
+  vm_sku       = "Standard_D4as_v5"
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
   #template_filename = "k8s_linux_node.yaml"
   template_filename = "azhop_cloudinit_config.yaml"
   config_values     = local.config_values_deployer
@@ -183,7 +183,7 @@ resource "azurerm_role_assignment" "rg_contributor" {
 
 data "template_file" "cloud_init_config" {
   template = file("${path.module}/../../templates/azhop_testconfig.yaml")
-  vars     = {}  #add vars to file later to simplify redeployment
+  vars     = {} #add vars to file later to simplify redeployment
 }
 
 #give deployer VM rights secret read rights on the password keyvault
