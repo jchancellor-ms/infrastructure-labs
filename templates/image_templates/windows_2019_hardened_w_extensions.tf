@@ -15,29 +15,27 @@ variable "tags" {
   description = "List of the tags that will be assigned to each resource"
 }
 
-variable "user_assigned_identity_id" {
-  type        = list(string)
-  description = "list of user identities associated with the image template"
-}
-
 variable "customizer_script_uri" {
   type        = string
   description = "URI of the powershell script used for customizing."
-}
-
-variable "image_definition_id" {
-  type        = string
-  description = "The gallery image ID for the shared image"
+  default     = ""
 }
 
 variable "run_output_name" {
   type        = string
   description = "Name of the custom image to create and distribute using Azure Image Builder."
+  default     = "Win2019_AzureWindowsBaseline_CustomImage"
+}
+
+variable "aib_identity_id" {
+  type        = string
+  description = "Azure resource Id for the aib run identity"
 }
 
 variable "replication_regions" {
   type        = list(string)
   description = "List the regions in Azure where you would like to replicate the custom image after it is created."
+  default     = ["westus3", "westus2"]
 }
 
 variable "staging_resource_group_id" {
@@ -46,7 +44,38 @@ variable "staging_resource_group_id" {
   default     = null
 }
 
-resource "azapi_resource" "image_ws2019_hardened_w_extensions" {
+variable "shared_gallery_name" {
+  type        = string
+  description = "the azure resource name for the image gallery"
+}
+
+variable "rg_name" {
+  type        = string
+  description = "The azure resource name for the resource group"
+}
+
+variable "rg_location" {
+  type        = string
+  description = "Resource Group region location"
+  default     = "westus2"
+}
+
+resource "azurerm_shared_image" "image_ws2019_hardened_w_extensions" {
+  name                = "Win2019_AzureWindowsBaseline_Definition"
+  gallery_name        = var.shared_gallery_name
+  resource_group_name = var.rg_name
+  location            = var.rg_location
+  os_type             = "Windows"
+  hyper_v_generation  = "V2"
+
+  identifier {
+    publisher = "AzureWindowsBaseline"
+    offer     = "WindowsServer"
+    sku       = "2019-Datacenter"
+  }
+}
+
+resource "azapi_resource" "image_template_ws2019_hardened_w_extensions" {
   type      = "Microsoft.VirtualMachineImages/imageTemplates@2022-02-14"
   name      = "windows_2019_hardened_w_extensions"
   location  = var.default_image_location
@@ -54,7 +83,7 @@ resource "azapi_resource" "image_ws2019_hardened_w_extensions" {
   tags      = var.tags
   identity {
     type         = "UserAssigned"
-    identity_ids = var.user_assigned_identity_id
+    identity_ids = [var.aib_identity_id]
   }
   body = jsonencode({
     properties = {
@@ -80,7 +109,7 @@ resource "azapi_resource" "image_ws2019_hardened_w_extensions" {
       distribute = [
         {
           type               = "SharedImage"
-          galleryImageId     = var.image_definition_id
+          galleryImageId     = azurerm_shared_image.image_ws2019_hardened_w_extensions.id
           runOutputName      = var.run_output_name
           replicationRegions = var.replication_regions
         }
@@ -109,7 +138,7 @@ resource "azapi_resource" "image_ws2019_hardened_w_extensions" {
         vmSize       = "Standard_D2_v3"
         osDiskSizeGB = 127
         userAssignedIdentities = [
-          "string"
+          var.aib_identity_id
         ]
         #use this section if using private IPs
         #vnetConfig = {
@@ -119,4 +148,29 @@ resource "azapi_resource" "image_ws2019_hardened_w_extensions" {
       }
     }
   })
+}
+
+resource "azurerm_resource_deployment_script_azure_power_shell" "Template_build" {
+  name                = "windows_2019_hardened_w_extensions_deployment"
+  resource_group_name = var.rg_name
+  location            = var.rg_location
+  version             = "6.2"
+  retention_interval  = "P1D"
+  #command_line        = "-name \"John Dole\""
+  cleanup_preference = "OnSuccess"
+  force_update_tag   = uuid()
+  timeout            = "PT30M"
+
+  script_content = <<EOF
+          Invoke-AzResourceAction -ResourceName "${azapi_resource.image_ws2019_hardened_w_extensions.name}" -ResourceGroupName "${var.rg_name}" -ResourceType "Microsoft.VirtualMachineImages/imageTemplates" -ApiVersion "2020-02-14" -Action Run -Force
+  EOF
+
+  identity {
+    type = "UserAssigned"
+    identity_ids = [
+      var.aib_identity_id
+    ]
+  }
+
+  tags = var.tags
 }

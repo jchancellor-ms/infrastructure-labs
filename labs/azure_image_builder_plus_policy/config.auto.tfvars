@@ -1,4 +1,4 @@
-prefix             = "vmgov"
+prefix             = "aib"
 region             = "westus3"
 name_string_suffix = "a1"
 
@@ -28,6 +28,8 @@ spoke_subnets = [
 domain_fqdn = "azuretestzone.com"
 
 tags = {
-  environment = "AzGovLab"
+  environment = "AzAIBLab"
   CreatedBy   = "Terraform"
 }
+
+aib_role_scope = "/subscriptions/19fbc0d1-6eee-4268-a84a-3f06e7a69fca"

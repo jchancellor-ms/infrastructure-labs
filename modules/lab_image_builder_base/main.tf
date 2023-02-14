@@ -52,27 +52,3 @@ resource "azurerm_shared_image_gallery" "AIB_image_gallery" {
   tags = var.tags
 }
 
-resource "azurerm_resource_deployment_script_azure_power_shell" "Template_build" {
-  name                = var.deployment_script_name
-  resource_group_name = var.rg_name
-  location            = var.rg_location
-  version             = "6.2"
-  retention_interval  = "P1D"
-  #command_line        = "-name \"John Dole\""
-  cleanup_preference = "OnSuccess"
-  force_update_tag   = var.force_update_tag
-  timeout            = "PT30M"
-
-  script_content = <<EOF
-          Invoke-AzResourceAction -ResourceName "${var.imageTemplateName}" -ResourceGroupName "${var.rg_name}" -ResourceType "Microsoft.VirtualMachineImages/imageTemplates" -ApiVersion "2020-02-14" -Action Run -Force
-  EOF
-
-  identity {
-    type = "UserAssigned"
-    identity_ids = [
-      azurerm_user_assigned_identity.AIB_Identity.id
-    ]
-  }
-
-  tags = var.tags
-}
