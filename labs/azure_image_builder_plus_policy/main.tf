@@ -5,7 +5,7 @@ locals {
   keyvault_name       = "${var.prefix}-kv-${var.region}-${local.name_string_suffix}"
   aib_identity_name   = "aib-identity-${local.name_string_suffix}"
   aib_role_name       = "aib-role-${local.name_string_suffix}"
-  image_gallery_name  = "aib-gallery-${local.name_string_suffix}"
+  image_gallery_name  = "aib_gallery_${local.name_string_suffix}"
 
 }
 
@@ -31,7 +31,7 @@ module "image_builder_base" {
 
 #create the image template resource
 module "template_windows_2019_hardened_w_extensions" {
-  source = "../../templates/image_templates/lab_image_builder_base"
+  source = "../../templates/image_templates/windows_2019_hardened_w_extensions"
 
   default_image_location    = "westus3"
   resource_group_id         = azurerm_resource_group.lab_rg.id

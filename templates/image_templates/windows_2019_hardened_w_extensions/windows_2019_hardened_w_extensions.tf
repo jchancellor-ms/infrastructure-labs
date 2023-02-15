@@ -1,4 +1,12 @@
 #base template modified from bicep sample here - https://github.com/Azure/azure-quickstart-templates/blob/master/demos/imagebuilder-windowsbaseline/main.bicep
+terraform {
+  required_providers {
+    azapi = {
+      source = "azure/azapi"
+    }
+  }
+}
+
 variable "default_image_location" {
   type        = string
   description = "The geo-location where the image template resource lives"
@@ -18,7 +26,7 @@ variable "tags" {
 variable "customizer_script_uri" {
   type        = string
   description = "URI of the powershell script used for customizing."
-  default     = ""
+  default     = "https://raw.githubusercontent.com/jchancellor-ms/infrastructure-labs/main/templates/image_scripts/windowsBaselineRunScript.ps1"
 }
 
 variable "run_output_name" {
@@ -66,7 +74,7 @@ resource "azurerm_shared_image" "image_ws2019_hardened_w_extensions" {
   resource_group_name = var.rg_name
   location            = var.rg_location
   os_type             = "Windows"
-  hyper_v_generation  = "V2"
+  hyper_v_generation  = "V1"
 
   identifier {
     publisher = "AzureWindowsBaseline"
@@ -121,7 +129,7 @@ resource "azapi_resource" "image_template_ws2019_hardened_w_extensions" {
         sku : "2019-Datacenter"
         version : "latest"
       }
-      stagingResourceGroup = var.staging_resource_group
+      stagingResourceGroup = var.staging_resource_group_id
       #TODO: build a validation block for the image build
       #validate = {
       #  continueDistributeOnFailure = bool
@@ -162,7 +170,7 @@ resource "azurerm_resource_deployment_script_azure_power_shell" "Template_build"
   timeout            = "PT30M"
 
   script_content = <<EOF
-          Invoke-AzResourceAction -ResourceName "${azapi_resource.image_ws2019_hardened_w_extensions.name}" -ResourceGroupName "${var.rg_name}" -ResourceType "Microsoft.VirtualMachineImages/imageTemplates" -ApiVersion "2020-02-14" -Action Run -Force
+          Invoke-AzResourceAction -ResourceName "${azapi_resource.image_template_ws2019_hardened_w_extensions.name}" -ResourceGroupName "${var.rg_name}" -ResourceType "Microsoft.VirtualMachineImages/imageTemplates" -ApiVersion "2020-02-14" -Action Run -Force
   EOF
 
   identity {
