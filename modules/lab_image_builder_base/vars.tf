@@ -29,3 +29,13 @@ variable "tags" {
   type        = map(string)
   description = "List of the tags that will be assigned to each resource"
 }
+
+variable "nsg_name" {
+  type        = string
+  description = "NSG name for the nsg associated with the AIB subnet"
+}
+
+variable "aib_storage_account_name" {
+  type        = string
+  description = "Name to use for the AIB storage account used to store script artifacts"
+}

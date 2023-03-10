@@ -26,7 +26,6 @@ variable "tags" {
 variable "customizer_script_uri" {
   type        = string
   description = "URI of the powershell script used for customizing."
-  default     = "https://raw.githubusercontent.com/jchancellor-ms/infrastructure-labs/main/templates/image_scripts/windowsBaselineRunScript.ps1"
 }
 
 variable "run_output_name" {
@@ -66,6 +65,11 @@ variable "rg_location" {
   type        = string
   description = "Resource Group region location"
   default     = "westus2"
+}
+
+variable "deploy_subnet_id" {
+  type        = string
+  description = "Subnet used for the proxy VM for AIB private link connection"
 }
 
 resource "azurerm_shared_image" "image_ws2019_hardened_w_extensions" {
@@ -109,10 +113,11 @@ resource "azapi_resource" "image_template_ws2019_hardened_w_extensions" {
         },
         {
           type        = "PowerShell"
-          name        = "AzureWindowsBaseline"
+          name        = "baseInstall"
           runElevated = true
           scriptUri   = var.customizer_script_uri
         }
+
       ]
       distribute = [
         {
@@ -143,21 +148,22 @@ resource "azapi_resource" "image_template_ws2019_hardened_w_extensions" {
       #  sourceValidationOnly = bool
       #}
       vmProfile = {
-        vmSize       = "Standard_D2_v3"
+        vmSize       = "Standard_D4as_v5"
         osDiskSizeGB = 127
         userAssignedIdentities = [
           var.aib_identity_id
         ]
         #use this section if using private IPs
-        #vnetConfig = {
-        #  proxyVmSize = "string"
-        #  subnetId = "string"
-        #}
+        vnetConfig = {
+          proxyVmSize = "Standard_D2as_v5"
+          subnetId    = var.deploy_subnet_id
+        }
       }
     }
   })
 }
 
+/*
 resource "azurerm_resource_deployment_script_azure_power_shell" "Template_build" {
   name                = "windows_2019_hardened_w_extensions_deployment"
   resource_group_name = var.rg_name
@@ -182,3 +188,4 @@ resource "azurerm_resource_deployment_script_azure_power_shell" "Template_build"
 
   tags = var.tags
 }
+*/

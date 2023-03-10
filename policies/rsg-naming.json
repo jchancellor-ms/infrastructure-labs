@@ -1,0 +1,133 @@
+{
+    "policyRule": {
+        "if": {
+            "allOf": [
+                {
+                    "field": "type",
+                    "equals": "Microsoft.Resources/subscriptions/resourceGroups"
+                },
+                {
+                    "value": "[string(length(split(field('name'),'-')))]",
+                    "notEquals": "6"
+                },
+                {
+                    "field": "name",
+                    "notContains": "aks"
+                },
+                {
+                    "field": "name",
+                    "notContains": "dbrick"
+                },
+                {
+                    "field": "name",
+                    "notContains": "databrick"
+                },
+                {
+                    "field": "name",
+                    "notContains": "dbx"
+                },
+                {
+                    "field": "name",
+                    "notContains": "NetworkWatcherRG"
+                },
+                {
+                    "field": "name",
+                    "notContains": "cloud-shell"
+                },
+                {
+                    "field": "name",
+                    "notContains": "dashboards"
+                },
+                {
+                    "field": "name",
+                    "notContains": "synapse"
+                },
+                {
+                    "field": "name",
+                    "notContains": "Default"
+                },
+                {
+                    "field": "name",
+                    "notContains": "HCI"
+                },
+                {
+                    "field": "name",
+                    "notContains": "Site-recovery"
+                },
+                {
+                    "field": "name",
+                    "notContains": "AzureBackupRG"
+                },
+                {
+                    "field": "name",
+                    "notContains": "resource-graph-queries"
+                },
+                {
+                    "field": "name",
+                    "notContains": "IT_"
+                },
+                {
+                    "field": "name",
+                    "notContains": "purview"
+                },
+                {
+                    "field": "name",
+                    "notContains": "Arc"
+                },
+                {
+                    "not": {
+                        "allOf": [
+                            {
+                                "value": "[string(length(split(field('name'),'-')))]",
+                                "Equals": "6"
+                            },
+                            {
+                                "value": "[split(field('name'), '-')[0]]",
+                                "MatchInsensitively": "[split(subscription().displayName,'-')[0]]"
+                            },
+                            {
+                                "value": "[split(field('name'), '-')[1]]",
+                                "MatchInsensitively": "[split(subscription().displayName,'-')[1]]"
+                            },
+                            {
+                                "value": "[split(field('name'), '-')[2]]",
+                                "MatchInsensitively": "[split(subscription().displayName,'-')[2]]"
+                            },
+                            {
+                                "value": "[split(field('name'), '-')[3]]",
+                                "Match": "##"
+                            },
+                            {
+                                "value": "[split(field('name'), '-')[4]]",
+                                "Match": "???"
+                            },
+                            {
+                                "value": "[split(field('name'), '-')[5]]",
+                                "MatchInsensitively": "rsg"
+                            },
+                            {
+                                "value": "[split(field('name'), '-')[3]]",
+                                "NotIn": [
+                                    "00",
+                                    "01",
+                                    "02",
+                                    "03",
+                                    "04",
+                                    "05",
+                                    "06",
+                                    "07",
+                                    "08",
+                                    "09",
+                                    "10"
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "then": {
+            "effect": "deny"
+        }
+    }
+}

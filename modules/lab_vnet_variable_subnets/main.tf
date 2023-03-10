@@ -8,11 +8,13 @@ resource "azurerm_virtual_network" "vnet" {
 }
 
 resource "azurerm_subnet" "subnets" {
-  for_each             = { for subnet in var.subnets : subnet.name => subnet }
-  name                 = each.value.name
-  resource_group_name  = var.rg_name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = each.value.address_prefix
+  for_each                                      = { for subnet in var.subnets : subnet.name => subnet }
+  name                                          = each.value.name
+  resource_group_name                           = var.rg_name
+  virtual_network_name                          = azurerm_virtual_network.vnet.name
+  address_prefixes                              = each.value.address_prefix
+  private_endpoint_network_policies_enabled     = each.value.private_endpoint_policies_enabled
+  private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled
 
 }
 

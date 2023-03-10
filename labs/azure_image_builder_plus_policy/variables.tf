@@ -8,3 +8,4 @@ variable "name_string_suffix" {}
 variable "spoke_vnet_address_space" {}
 variable "spoke_subnets" {}
 variable "aib_role_scope" {}
+variable "ext_role_scope" {}

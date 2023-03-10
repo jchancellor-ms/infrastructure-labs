@@ -21,8 +21,10 @@ variable "vnet_address_space" {
 
 variable "subnets" {
   type = list(object({
-    name           = string
-    address_prefix = list(string)
+    name                                          = string
+    address_prefix                                = list(string)
+    private_endpoint_policies_enabled             = bool
+    private_link_service_network_policies_enabled = bool
   }))
 }
 
