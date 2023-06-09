@@ -90,7 +90,31 @@ module "lab_build_extension_artifacts" {
   ]
 }
 
+#create all of the defined templates in the config file
+module "create_image_builder_templates" {
+  source   = "../../modules/lab_build_image_template_private_network"
+  for_each = { for image in var.image_configurations : image.image_definition_name => image }
 
+  image_definition_name     = each.value.image_definition_name
+  shared_gallery_name       = module.image_builder_base.aib_shared_gallery_name
+  rg_name                   = azurerm_resource_group.lab_rg.name
+  rg_location               = azurerm_resource_group.lab_rg.location
+  os_type                   = each.value.os_type
+  hyper_v_generation        = each.value.hyper_v_generation
+  image_publisher           = each.value.image_publisher
+  image_offer               = each.value.image_offer
+  image_sku                 = each.value.image_sku
+  tags                      = var.tags
+  template_file_name        = each.value.template_file_name
+  run_output_name           = each.value.run_output_name
+  replication_regions       = each.value.replication_regions
+  default_image_location    = each.value.default_image_location
+  aib_identity_id           = module.image_builder_base.aib_user_managed_identity_id
+  staging_resource_group_id = ""
+  deploy_subnet_id          = module.lab_spoke_virtual_network.subnet_ids["AIBSubnet"].id
+}
+
+/*
 #create the image template resource
 module "template_windows_2019_hardened_w_extensions" {
   source = "../../templates/image_templates/windows_2019_hardened_w_extensions"
@@ -106,11 +130,11 @@ module "template_windows_2019_hardened_w_extensions" {
   rg_location               = azurerm_resource_group.lab_rg.location
   shared_gallery_name       = module.image_builder_base.aib_shared_gallery_name
   deploy_subnet_id          = module.lab_spoke_virtual_network.subnet_ids["AIBSubnet"].id
-  customizer_script_uri     = ""
+  customizer_script_uri     = "https://raw.githubusercontent.com/jchancellor-ms/infrastructure-labs/main/templates/image_scripts/windowsCustomization.ps1"
 
   depends_on = [
     module.image_builder_base,
     module.lab_spoke_virtual_network
   ]
 }
-
+*/

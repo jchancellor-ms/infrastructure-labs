@@ -1,0 +1,11 @@
+{
+  "policyRule": {
+    "if": {
+      "field": "type",
+      "equals": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings"
+    },
+    "then": {
+      "effect": "deny"
+    }
+  }
+}

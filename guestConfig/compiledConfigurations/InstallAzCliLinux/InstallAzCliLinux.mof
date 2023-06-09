@@ -1,0 +1,35 @@
+/*
+@TargetNode='localhost'
+@GeneratedBy=root
+@GenerationDate=06/09/2023 14:24:03
+@GenerationHost=DESKTOP-S9V2HLL
+*/
+
+instance of installAzCliLinux as $installAzCliLinux1ref
+{
+ModuleVersion = "0.0.1";
+ Name = "AzCLILatest";
+ ResourceID = "[installAzCliLinux]thisLinuxMachine";
+ SourceInfo = "/home/jon/dse/infrastructure-labs/guestConfig/configurations/InstallAzCliLinux.ps1::13::5::InstallAzCliLinux";
+ Ensure = "Present";
+ ModuleName = "installAzCliLinux";
+ ConfigurationName = "InstallAzCliLinux";
+};
+instance of OMI_ConfigurationDocument
+
+                    {
+ Version="2.0.0";
+
+                        MinimumCompatibleVersion = "1.0.0";
+
+                        CompatibleVersionAdditionalProperties= {"Omi_BaseResource:ConfigurationName"};
+
+                        Author="root";
+
+                        GenerationDate="06/09/2023 14:24:03";
+
+                        GenerationHost="DESKTOP-S9V2HLL";
+
+                        Name="InstallAzCliLinux";
+
+                    };

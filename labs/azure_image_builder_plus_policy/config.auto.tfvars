@@ -48,3 +48,19 @@ tags = {
 
 aib_role_scope = "/subscriptions/19fbc0d1-6eee-4268-a84a-3f06e7a69fca"
 ext_role_scope = "/subscriptions/19fbc0d1-6eee-4268-a84a-3f06e7a69fca"
+
+
+image_configurations = [
+  {
+    image_definition_name  = "linux_ubuntu_1804_hardened_test",
+    template_file_name     = "linux_ubuntu_1804_hardened_base.json.tpl",
+    os_type                = "Linux",
+    hyper_v_generation     = "V1",
+    image_publisher        = "customer_custom_images"
+    image_offer            = "ubuntu-server"
+    image_sku              = "18_04_lts_gen1_cis"
+    run_output_name        = "linux_ubuntu_1804_run_output",
+    replication_regions    = ["westus2", "westus3"],
+    default_image_location = "westus3"
+  }
+]

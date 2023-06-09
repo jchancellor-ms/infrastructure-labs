@@ -1,0 +1,173 @@
+KubePodInventory
+| where _IsBillable == true
+| summarize recordCount = count() by ClusterName, Namespace
+
+KubePodInventory
+| top 10 by TimeGenerated
+
+
+#by Log source and namespace
+KubePodInventory
+| where Namespace == 'calico-system'
+| distinct ContainerID, Namespace
+| join hint.strategy=shuffle (
+    ContainerLog
+    | where _IsBillable == true
+    | summarize BillableDataBytes = sum(_BilledSize) by LogEntrySource, ContainerID
+    )
+    on ContainerID
+| union (
+    KubePodInventory
+    | where Namespace == 'calico-system'
+    | distinct ContainerID, Namespace
+    | join hint.strategy=shuffle (
+        ContainerLogV2
+        | project-rename ContainerID = ContainerId, LogEntrySource = LogSource
+        | where _IsBillable == true
+        | summarize BillableDataBytes = sum(_BilledSize) by LogEntrySource, ContainerID
+        )
+        on ContainerID
+    )
+| extend sourceNamespace = strcat(LogEntrySource, "/", Namespace)
+| summarize Total=sum(BillableDataBytes) by sourceNamespace
+
+
+
+#by namespace
+KubePodInventory
+| distinct ContainerID, Namespace
+| join kind=innerunique (
+    ContainerLog
+    | where _IsBillable == true
+    | summarize BillableDataBytes = sum(_BilledSize) by ContainerID
+    )
+    on ContainerID
+| union (
+    KubePodInventory
+    | distinct ContainerID, Namespace
+    | join kind=innerunique (
+        ContainerLogV2
+        | project-rename ContainerID = ContainerId
+        | where _IsBillable == true
+        | summarize BillableDataBytes = sum(_BilledSize) by ContainerID
+        )
+        on ContainerID
+    )
+| summarize Total=sum(BillableDataBytes) by Namespace
+| render piechart
+
+union withsource = SourceTable
+    AzureDiagnostics,
+    AzureActivity,
+    AzureMetrics,
+    ContainerLog,
+    ContainerLogV2,
+    Perf,
+    KubePodInventory,
+    ContainerInventory,
+    InsightsMetrics,
+    KubeEvents,
+    KubeServices,
+    KubeNodeInventory,
+    ContainerNodeInventory,
+    KubeMonAgentEvents,
+    ContainerServiceLog,
+    Heartbeat,
+    KubeHealth,
+    ContainerImageInventory,
+    Syslog
+| where _IsBillable == true
+| project _BilledSize, TimeGenerated, SourceTable
+| summarize BillableDataBytes = sum(_BilledSize) by bin(TimeGenerated, 10m), SourceTable
+| render piechart
+
+union withsource = SourceTable
+    AzureDiagnostics,
+    AzureActivity,
+    AzureMetrics,
+    ContainerLog,
+    ContainerLogV2,
+    Perf,
+    KubePodInventory,
+    ContainerInventory,
+    InsightsMetrics,
+    KubeEvents,
+    KubeServices,
+    KubeNodeInventory,
+    ContainerNodeInventory,
+    KubeMonAgentEvents,
+    ContainerServiceLog,
+    Heartbeat,
+    KubeHealth,
+    ContainerImageInventory,
+    Syslog
+| where _IsBillable == true
+| project _BilledSize, TimeGenerated, SourceTable
+| summarize BillableDataBytes = sum(_BilledSize) by bin(TimeGenerated, 10m), SourceTable
+| render piechart
+
+
+union withsource = SourceTable
+    AzureDiagnostics,
+    AzureActivity,
+    AzureMetrics,
+    ContainerLog,
+    ContainerLogV2,
+    Perf,
+    KubePodInventory,
+    ContainerInventory,
+    InsightsMetrics,
+    KubeEvents,
+    KubeServices,
+    KubeNodeInventory,
+    ContainerNodeInventory,
+    KubeMonAgentEvents,
+    ContainerServiceLog,
+    Heartbeat,
+    KubeHealth,
+    ContainerImageInventory,
+    Syslog
+| extend splitID=split(_ResourceId, '/')
+| extend subscriptionId = splitID[2]
+| extend resourceGroup = splitID[4]
+| extend resource = splitID[8]
+| extend resourceType = splitID[6]
+| extend resourceSubType = splitID[7]
+| where resourceSubType == "managedclusters"
+| where _IsBillable == true
+| project _BilledSize, TimeGenerated, SourceTable, resourceType, resourceSubType, resource, _ResourceId
+| summarize BillableDataBytes = sum(_BilledSize) by bin(TimeGenerated, 24h), SourceTable, _ResourceId, tostring(resourceType), tostring(resourceSubType), tostring(resource)
+
+
+Invoke-AzOperationalInsightsQuery -WorkspaceId Microsoft.Azure.Commands.OperationalInsights.Models.PSWorkspace.CustomerId -Query
+"union withsource = SourceTable
+    AzureDiagnostics,
+    AzureActivity,
+    AzureMetrics,
+    ContainerLog,
+    ContainerLogV2,
+    Perf,
+    KubePodInventory,
+    ContainerInventory,
+    InsightsMetrics,
+    KubeEvents,
+    KubeServices,
+    KubeNodeInventory,
+    ContainerNodeInventory,
+    KubeMonAgentEvents,
+    ContainerServiceLog,
+    Heartbeat,
+    KubeHealth,
+    ContainerImageInventory,
+    Syslog
+| where _IsBillable == true
+| project _BilledSize, TimeGenerated, SourceTable, _ResourceId
+| summarize BillableDataBytes = sum(_BilledSize) by bin(TimeGenerated, 24h), SourceTable, tostring(_ResourceId)
+| extend splitID=split(_ResourceId, '/')
+| extend subscriptionId = splitID[2]
+| extend resourceGroup = splitID[4]
+| extend resource = splitID[8]
+| extend resourceType = splitID[6]
+| extend resourceSubType = splitID[7]
+| where resourceSubType == 'managedclusters'
+| project BillableDataBytes/1000/1000/1000, TimeGenerated, subscriptionId, resourceGroup, resource, SourceTable -Timespan (New-TimeSpan -Days 14)"

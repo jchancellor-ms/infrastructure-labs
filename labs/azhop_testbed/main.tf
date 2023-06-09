@@ -8,6 +8,7 @@ locals {
   bastion_name        = "${var.prefix}-bastion-${var.region}-${local.name_string_suffix}"
   la_name             = "${var.prefix}-la-${var.region}-${local.name_string_suffix}"
   deployer_vm_name    = "dp-${var.region}-${local.name_string_suffix}"
+  guestconfig_vm_name    = "gc-${var.region}-${local.name_string_suffix}"
   vm_vault_identity   = "vm-vault-identity-${local.name_string_suffix}"
 
   config_values_dc = {
@@ -117,7 +118,7 @@ module "lab_dc" {
   subnet_id            = module.lab_hub_virtual_network.subnet_ids["DCSubnet"].id
   vm_sku               = "Standard_D4as_v5"
   key_vault_id         = module.on_prem_keyvault_with_access_policy.keyvault_id
-  keyvault_name        = local.keyvault_name
+  #keyvault_name        = local.keyvault_name
   private_ip_address_1 = cidrhost(module.lab_hub_virtual_network.subnet_ids["DCSubnet"].address_prefixes[0], 100)
   availability_set_id  = azurerm_availability_set.domain_controllers.id
   config_values        = local.config_values_dc
@@ -200,4 +201,20 @@ resource "azurerm_key_vault_access_policy" "deployment_user_access" {
     module.on_prem_keyvault_with_access_policy
   ]
 
+}
+
+#additional linux VM
+module "guestconfig_linux" {
+  source = "../../modules/lab_guest_server_ubuntu_1804"
+
+  rg_name      = azurerm_resource_group.lab_rg.name
+  rg_location  = azurerm_resource_group.lab_rg.location
+  subnet_id    = module.lab_hub_virtual_network.subnet_ids["DCSubnet"].id
+  vm_name      = local.guestconfig_vm_name
+  vm_sku       = "Standard_D4as_v5"
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
+  #template_filename = "k8s_linux_node.yaml"
+  template_filename = "azhop_cloudinit_config.yaml"
+  config_values     = local.config_values_deployer
+  vm_vault_identity = azurerm_user_assigned_identity.vm_vault_identity.id
 }

@@ -1,0 +1,97 @@
+{
+    "properties": {
+        "buildTimeoutInMinutes": 80,
+        "vmProfile": {
+            "vmSize": "Standard_D4as_v5",
+            "osDiskSizeGB": 127,
+            "userAssignedIdentities": [
+                                /subscriptions/19fbc0d1-6eee-4268-a84a-3f06e7a69fca/resourceGroups/aib-rg-westus3-a4/providers/Microsoft.ManagedIdentity/userAssignedIdentities/aib-identity-a4
+            ],
+            "vnetConfig": {
+                "proxyVmSize": "Standard_D2as_v5",
+                "subnetId": /subscriptions/19fbc0d1-6eee-4268-a84a-3f06e7a69fca/resourceGroups/aib-rg-westus3-a4/providers/Microsoft.Network/virtualNetworks/aib-vnet-spoke-westus3-a4/subnets/AIBSubnet
+            }
+        },
+        "source": {
+            "type": "PlatformImage",
+            "publisher": "Canonical",
+            "offer": "UbuntuServer",
+            "sku": "18.04-LTS",
+            "version": "latest"
+        },
+        "stagingResourceGroup": ,
+        "customize": [
+            {
+                "type": "Shell",
+                "name": "WaitForUAtokenAutoAttach",
+                "inline": [
+                    "sudo ua status --wait"
+                ]
+            },
+            {
+                "type": "Shell",
+                "name": "EnableCISfeature",
+                "inline": [
+                    "sudo ua enable cis"
+                ]
+            },
+            {
+                "type": "Shell",
+                "name": "RunCIShardening - see https://ubuntu.com/security/certifications/docs/cis-compliance",
+                "inline": [
+                    "sudo /usr/share/ubuntu-scap-security-guides/cis-hardening/Canonical_Ubuntu_18.04_CIS-harden.sh lvl1_server"
+                ]
+            },
+            {
+                "type": "Shell",
+                "name": "UDFworkaroundForAzureVMbooting - UDF is required for Azure image provisioning",
+                "inline": [
+                    "sudo rm -f /etc/modprobe.d/Canonical_Ubuntu_CIS_rule-1.1.1.7.conf"
+                ]
+            },
+            {
+                "type": "Shell",
+                "name": "Install the Azure CLI as a test app",
+                "inline": [
+                    "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"
+                ]
+            },
+            {
+                "type": "Shell",
+                "name": "DetachUA -- images created from this will auto attach themselves with new credentials",
+                "inline": [
+                    "sudo ua detach --assume-yes && sudo rm -rf /var/log/ubuntu-advantage.log"
+                ]
+            },
+            {
+                "type": "Shell",
+                "name": "InstallUpgrades",
+                "inline": [
+                    "sudo apt install unattended-upgrades"
+                ]
+            },
+            {
+                "type": "Shell",
+                "name": "Replace /etc/machine-id with empty file to ensure UA client does not see clones as duplicates",
+                "inline": [
+                    "sudo rm -f /etc/machine-id && sudo touch /etc/machine-id"
+                ]
+            }
+        ],
+        "distribute": [
+            {
+                "type": "SharedImage",
+                "galleryImageId": /subscriptions/19fbc0d1-6eee-4268-a84a-3f06e7a69fca/resourceGroups/aib-rg-westus3-a4/providers/Microsoft.Compute/galleries/aib_gallery_a4/images/linux_ubuntu_1804_hardened_test,
+                "runOutputName": linux_ubuntu_1804_run_output,
+                "artifactTags": {
+                    "source": "azVmImageBuilder",
+                    "baseosimg": "ubuntu1804"
+                },
+                "replicationRegions": [
+                    "westus2",
+                    "westus3"
+                ]
+            }
+        ]
+    }
+}

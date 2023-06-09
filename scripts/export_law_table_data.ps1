@@ -4,9 +4,10 @@ connect-azaccount
 #get a list of subscriptions
 $subscriptions = Get-AzSubscription
 
-$query = 'Usage
+$queryDaily = 'Usage
 | where TimeGenerated > ago(1d)
 | summarize  SizeMB = sum(Quantity), SizeGB = sum(Quantity)/1000 by DataType, IsBillable, ResourceUri'
+
 
 #for each subscription
 foreach($subscription in $subscriptions) {
@@ -20,7 +21,7 @@ foreach($subscription in $subscriptions) {
         foreach($workspace in $workspaces) { 
             Write-Host ("Processing Workspace " + $workspace.Name)
             #get space details for the workspaces
-            $results = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $query
+            $results = Invoke-AzOperationalInsightsQuery -WorkspaceId $workspace.CustomerId -Query $queryDaily
             $sum = 0
             foreach($result in $results.results){
                 $sum += $result.count

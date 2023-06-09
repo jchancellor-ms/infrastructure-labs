@@ -1,0 +1,17 @@
+{
+	"mode": "Indexed",
+	"policyRule": {
+		"if": {
+            "type": "field",
+            "equals": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings"
+		},
+		"then": {
+			"effect": "DenyAction",
+			"details": {
+				"actionNames": [
+					"delete"
+				]
+			}
+		}
+	}
+}
