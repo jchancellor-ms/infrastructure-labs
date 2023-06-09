@@ -8,7 +8,7 @@ If (!(Test-Path -PathType container $outFullPath)) {
     New-Item -ItemType Directory -Path $outFullPath
 }
 
-Configuration InstallAzCliLinux {
+Configuration installAzCliLinux {
     Import-DscResource -Name 'installAzCliLinux' -ModuleName 'installAzCliLinux'
     InstallAzCliLinux thisLinuxMachine {
         Name = "AzCLILatest"
