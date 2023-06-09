@@ -125,27 +125,36 @@ function Get-AzCliStatus {
     }
     catch {
         $message = $null
-        $cliData.installStatus = "NotInstalled"
-        $cliData.version = $null
-        $cliData.error = $_
+        $cliData = @{
+            installStatus = "NotInstalled"
+            version = $null
+            error = $_
+        }
         Write-Error -Message "Failed to get CLI version with error : $_"
     }
 
     if ($message){
         if ($message.split(" ")[0] -eq 'azure-cli' -and $message.split(" ")[-1] -eq "*"){
-            $cliData.installStatus = "Installed"
-            $cliData.versionStatus = "UpgradeAvailable"
-            $cliData.version = $message.split(" ")[-2]
+            $cliData = @{
+                installStatus = "Installed"
+                versionStatus = "UpgradeAvailable"
+                version = $message.split(" ")[-2]
+            }
+            
         }
         elseif ($message.split(" ")[0] -eq 'azure-cli' -and $message.split(" ")[-1] -ne "*"){
-            $cliData.installStatus = "Installed"
-            $cliData.versionStatus = "Latest"
-            $cliData.version = $message.split(" ")[-1]
+            $cliData = @{
+                installStatus = "Installed"
+                versionStatus = "Latest"
+                version = $message.split(" ")[-1]
+            }
         }
         else {
-            $cliData.installStatus = "Unknown"
-            $cliData.versionStatus = "Unknown"
-            $cliData.version = $message.split(" ")[-1]
+            $cliData = @{
+                installStatus = "Unknown"
+                versionStatus = "Unknown"
+                version = $message.split(" ")[-1]
+            }
         }
     }
 
