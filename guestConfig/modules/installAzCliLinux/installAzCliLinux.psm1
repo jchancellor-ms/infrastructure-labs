@@ -120,18 +120,9 @@ function Get-AzCliStatus {
 
     $azCommand = 'sudo az -v | sudo grep azure-cli'
 
-    try {
+
         $message = $(Invoke-Command -ScriptBlock { bash -c $azCommand })
-    }
-    catch {
-        $message = $null
-        $cliData = @{
-            installStatus = "NotInstalled"
-            version = $null
-            error = $_
-        }
-        Write-Error -Message "Failed to get CLI version with error : $_"
-    }
+
 
     if ($message){
         if ($message.split(" ")[0] -eq 'azure-cli' -and $message.split(" ")[-1] -eq "*"){
