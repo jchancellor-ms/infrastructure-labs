@@ -121,7 +121,7 @@ function Get-AzCliStatus {
     $azCommand = 'sudo az -v | sudo grep azure-cli'
 
     try {
-        $message = ConvertFrom-Json -inputObject $(Invoke-Command -ScriptBlock { bash -c $azCommand })
+        $message = $(Invoke-Command -ScriptBlock { bash -c $azCommand })
     }
     catch {
         $message = $null
