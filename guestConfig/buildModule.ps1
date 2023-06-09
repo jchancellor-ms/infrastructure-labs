@@ -17,25 +17,25 @@ Install-Module -Name GuestConfiguration -MinimumVersion 4.3.0 -AcceptLicense -Sk
 
 
 #copy the modules path to the default modules path
-copy-item -path "$contentPath\modules\*" -Destination "/usr/local/share/powershell/Modules" -Recurse -Force
+copy-item -path "$contentPat/modules/*" -Destination "/usr/local/share/powershell/Modules" -Recurse -Force
 
-$modules = Get-ChildItem "$contentPath\modules\" -Directory
+$modules = Get-ChildItem "$contentPath/modules/" -Directory
 foreach ($module in $modules){
     import-module $module.Name -force
 }
 
 #build each configuration
-$configurations = Get-ChildItem "$contentPath\configurations\" -Recurse -Filter *.ps1
+$configurations = Get-ChildItem "$contentPath/configurations/" -Recurse -Filter *.ps1
 foreach ($configuration in $configurations)
 {
     #compile the configuration 
     . $configuration.FullName
 
     #rename the compiled configuration 
-    Rename-Item -Path ".\compiledConfigurations\$($configuration.BaseName)\localhost.mof" -NewName "$($configuration.BaseName).mof" -PassThru
+    Rename-Item -Path "./compiledConfigurations/$($configuration.BaseName)/localhost.mof" -NewName "$($configuration.BaseName).mof" -PassThru
 
     #create the package
-    $compiledConfiguration = "$contentPath\compiledConfigurations\$($configuration.BaseName)\$($configuration.BaseName).mof"
+    $compiledConfiguration = "$contentPath/compiledConfigurations/$($configuration.BaseName)/$($configuration.BaseName).mof"
 
-    new-GuestConfigurationPackage -Name  $configuration.BaseName -Configuration $compiledConfiguration -Path $contentPath\packages\ -Version $version -Type $type -Force  
+    new-GuestConfigurationPackage -Name  $configuration.BaseName -Configuration $compiledConfiguration -Path $contentPath/packages/ -Version $version -Type $type -Force  
 }
