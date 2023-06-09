@@ -2,7 +2,7 @@ param(
     [string[]]$outDirectory = "./compiledConfigurations"
 )
 
-$outFullPath = "$outDirectory/InstallAzCliLinux"
+$outFullPath = "$outDirectory/installAzCliLinux"
 
 If (!(Test-Path -PathType container $outFullPath)) {
     New-Item -ItemType Directory -Path $outFullPath
