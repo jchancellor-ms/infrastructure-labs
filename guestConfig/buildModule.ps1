@@ -17,7 +17,7 @@ Install-Module -Name GuestConfiguration -MinimumVersion 4.3.0 -AcceptLicense -Sk
 
 
 #copy the modules path to the default modules path
-copy-item -path "$contentPat/modules/*" -Destination "/usr/local/share/powershell/Modules" -Recurse -Force
+copy-item -path "$contentPath/modules/*" -Destination "/usr/local/share/powershell/Modules" -Recurse -Force
 
 $modules = Get-ChildItem "$contentPath/modules/" -Directory
 foreach ($module in $modules){
