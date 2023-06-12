@@ -19,7 +19,7 @@ Import-Module PSDesiredStateConfiguration -Force -MinimumVersion 2.0.6
 Install-Module -Name GuestConfiguration -MinimumVersion 4.3.0 -AcceptLicense -SkipPublisherCheck -Repository PSGallery -Force          
 
 # This module is required for all machine config modules
-Import-Module "$contentPath/modules/AzMachineConfigCommon/AzMachineConfigCommon.psd1" -force
+Import-Module "$contentPath/modules/azMachineConfigCommon/azMachineConfigCommon.psd1" -force
 
 #copy the modules path to the default modules path on the build machine
 copy-item -path "$contentPath/modules/*" -Destination "/usr/local/share/powershell/Modules" -Recurse -Force
