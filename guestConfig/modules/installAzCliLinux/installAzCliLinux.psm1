@@ -23,9 +23,13 @@ class installAzCliLinux {
         $metadata = $this.getVmDetails()
         $cliStatus = Get-AzCliStatus
 
+        
+
         # Create the constructor
         $currentState = [installAzCliLinux]::new()
         $currentState.name = $this.name
+
+        Write-Host "The name used is $($this.name)"
 
         #get the data from the metadata
 
@@ -63,7 +67,7 @@ class installAzCliLinux {
         $CurrentState = $this.Get()
 
         # if current state of Ensure does not match what I specified in my manifest
-        if ($CurrentState.Ensure -ne $this.Ensure) {
+        if ($CurrentState.Ensure -ne $this.ensure) {
             return $false
         }
 
