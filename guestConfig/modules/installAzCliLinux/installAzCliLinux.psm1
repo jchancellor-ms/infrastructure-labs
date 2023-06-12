@@ -1,16 +1,16 @@
 [DscResource()]
 class installAzCliLinux {
     [DscProperty(Key)]
-    [string] $Name
+    [string] $name
 
     [DscProperty(Mandatory)]
-    [installAzCliLinuxEnsure] $Ensure
+    [installAzCliLinuxEnsure] $ensure
 
     [DscProperty(NotConfigurable)]
-    [installAzCliReason[]] $Reasons = [installAzCliReason[]]::new()
+    [installAzCliReason[]] $reasons = [installAzCliReason[]]::new()
 
     [DscProperty()]
-    [String] $Version = $null
+    [String] $version = $null
 
     [DscProperty()]
     [String] $versionStatus = $null
@@ -20,36 +20,38 @@ class installAzCliLinux {
     # Get() method
     [installAzCliLinux] Get() {
     
-        # Create the constructor
-        $currentState = [installAzCliLinux]::new()
-        $CurrentState.Name = $this.Name
-
-        #get the data from the metadata
         $metadata = $this.getVmDetails()
         $cliStatus = Get-AzCliStatus
+
+        # Create the constructor
+        $currentState = [installAzCliLinux]::new()
+        $currentState.name = $this.name
+
+        #get the data from the metadata
+
         
 
         if ($cliStatus.installStatus -eq "NotInstalled" -and $metadata.compute.osType -eq "Linux") {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
-            $currentState.Reasons += "The Azure CLI is not currently installed."
+            $currentState.reasons += "The Azure CLI is not currently installed."
         }
         elseif ($cliStatus.installStatus -eq "Unknown" -and $metadata.compute.osType -eq "Linux") {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
-            $currentState.Reasons += "The Azure CLI installation status was unable to be determined and returned error $($cliStatus.error)"
+            $currentState.reasons += "The Azure CLI installation status was unable to be determined and returned error $($cliStatus.error)"
         }
         else {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Present
             $currentState.version = $cliStatus.version
             $currentState.versionStatus = $cliStatus.versionStatus
             if ($cliStatus.versionStatus -eq "UpgradeAvailable") {
-                $currentState.Reasons += "The Azure CLI is installed but a newer version is available for upgrade"
+                $currentState.reasons += "The Azure CLI is installed but a newer version is available for upgrade"
             }
             else {
-                $currentState.Reasons += "The Azure CLI is installed and at the latest version"
+                $currentState.reasons += "The Azure CLI is installed and at the latest version"
             }
         }
 

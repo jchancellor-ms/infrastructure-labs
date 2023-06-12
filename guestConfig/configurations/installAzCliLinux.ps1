@@ -12,7 +12,7 @@ Configuration installAzCliLinux {
     Import-DscResource -Name 'installAzCliLinux' -ModuleName 'installAzCliLinux'
     installAzCliLinux thisLinuxMachine {
         Name = "AzCLILatest"
-        Ensure = 'Present'
+        Ensure = "Present"
     }
 }
 
