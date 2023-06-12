@@ -18,22 +18,17 @@ class installAzCliLinux {
 
     # class constructor
     # Get() method
-    [installAzCliLinux] Get() {
-    
-        $metadata = $this.getVmDetails()
-        $cliStatus = Get-AzCliStatus
-
-        
+    [installAzCliLinux] Get() {        
 
         # Create the constructor
         $currentState = [installAzCliLinux]::new()
         $currentState.name = $this.name
 
+        $metadata = $this.getVmDetails()
+        $cliStatus = Get-AzCliStatus
         Write-Host "The name used is $($this.name)"
 
-        #get the data from the metadata
-
-        
+        #get the data from the metadata        
 
         if ($cliStatus.installStatus -eq "NotInstalled" -and $metadata.compute.osType -eq "Linux") {
             $currentState.ensure = [installAzCliLinuxEnsure]::Absent
