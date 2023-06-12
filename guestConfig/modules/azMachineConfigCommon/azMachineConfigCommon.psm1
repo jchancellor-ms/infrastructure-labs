@@ -2,8 +2,8 @@
 set-strictmode -version latest
 
 # enumerate all the public and private functions in the module
-$Public = @(Get-ChildItem -Path $PSScriptRoot\Public\*.ps1 -ErrorAction SilentlyContinue)
-$Private = @(Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -ErrorAction SilentlyContinue)
+$Public = @(Get-ChildItem -Path $PSScriptRoot/public/*.ps1 -ErrorAction SilentlyContinue)
+$Private = @(Get-ChildItem -Path $PSScriptRoot/private/*.ps1 -ErrorAction SilentlyContinue)
 
 # Import all of the public and private functions by dot sourcing them
 foreach ($import in @($Public + $Private)) {

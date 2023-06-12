@@ -37,10 +37,10 @@ foreach ($module in $modules){
     }
     
     #update the common modules manifest functions params
-    if ($module.Name -eq "AzMachineConfigCommon") {
+    if ($module.Name -eq "azMachineConfigCommon") {
 
         # Enumerate all public functions
-        $publicFunctionPath = Join-Path -Path $module.FullName -ChildPath "Public"
+        $publicFunctionPath = Join-Path -Path $module.FullName -ChildPath "public"
         $publicFunctions = Get-ChildItem $publicFunctionPath | ForEach-Object { $_.BaseName }
         $Params += @{FunctionsToExport = $publicFunctions}
         Update-ModuleManifest @Params
@@ -61,5 +61,5 @@ foreach ($configuration in $configurations)
     #create the package
     $compiledConfiguration = "$contentPath/compiledConfigurations/$($configuration.BaseName)/$($configuration.BaseName).mof"
 
-    new-GuestConfigurationPackage -Name  $configuration.BaseName -Configuration $compiledConfiguration -Path $contentPath/packages/ -FilesToInclude "$contentPath/modules/AzMachineConfigCommon/" -Version $buildVersion -Type $type -Force  
+    new-GuestConfigurationPackage -Name  $configuration.BaseName -Configuration $compiledConfiguration -Path $contentPath/packages/ -FilesToInclude "$contentPath/modules/azMachineConfigCommon/" -Version $buildVersion -Type $type -Force  
 }
