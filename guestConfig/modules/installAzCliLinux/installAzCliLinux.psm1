@@ -7,7 +7,7 @@ class installAzCliLinux {
     [installAzCliLinuxEnsure] $Ensure
 
     [DscProperty(NotConfigurable)]
-    [installAzCliReason[]] $Reasons
+    [installAzCliReason[]] $Reasons = [installAzCliReason[]]::new()
 
     [DscProperty()]
     [String] $Version
@@ -15,8 +15,6 @@ class installAzCliLinux {
     [DscProperty()]
     [String] $versionStatus
 
-    [DscProperty()]
-    [installAzCliStatus[]] $cliStatus
 
     # class constructor
     # Get() method
@@ -27,27 +25,27 @@ class installAzCliLinux {
         $CurrentState.Name = $this.Name
 
         #get the data from the metadata
-        $metadata = Get-VmDetails
-        $currentState.cliStatus = Get-AzCliStatus
+        $metadata = $this.getVmDetails()
+        $cliStatus = Get-AzCliStatus
         
 
-        if ($currentState.cliStatus.installStatus -eq "NotInstalled" -and $metadata.compute.osType -eq "Linux") {
+        if ($cliStatus.installStatus -eq "NotInstalled" -and $metadata.compute.osType -eq "Linux") {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
             $currentState.Reasons += "The Azure CLI is not currently installed."
         }
-        elseif ($currentState.cliStatus.installStatus -eq "Unknown" -and $metadata.compute.osType -eq "Linux") {
+        elseif ($cliStatus.installStatus -eq "Unknown" -and $metadata.compute.osType -eq "Linux") {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
-            $currentState.Reasons += "The Azure CLI installation status was unable to be determined and returned error $($currentState.cliStatus.error)"
+            $currentState.Reasons += "The Azure CLI installation status was unable to be determined and returned error $($cliStatus.error)"
         }
         else {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Present
-            $currentState.version = $currentState.cliStatus.version
-            $currentState.versionStatus = $currentState.cliStatus.versionStatus
-            if ($currentState.cliStatus.versionStatus -eq "UpgradeAvailable") {
+            $currentState.version = $cliStatus.version
+            $currentState.versionStatus = $cliStatus.versionStatus
+            if ($cliStatus.versionStatus -eq "UpgradeAvailable") {
                 $currentState.Reasons += "The Azure CLI is installed but a newer version is available for upgrade"
             }
             else {
@@ -93,6 +91,7 @@ class installAzCliLinux {
         $installOutput = Invoke-Command -ScriptBlock { bash -c $curlCommand }
 
     }
+       
 }
 
 enum installAzCliLinuxEnsure
@@ -114,7 +113,7 @@ class installAzCliReason {
 #define a class resource for the cliStatus property
 class installAzCliStatus {
     [DscProperty()]
-    [string] $InstallStatus
+    [string] $installStatus
 
     [DscProperty()]
     [string] $version
@@ -126,73 +125,3 @@ class installAzCliStatus {
     [string] $error
 }
 
-#get data from the IMDS for the vm for use in decision making
-function Get-VmDetails{
-
-    $curlCommand = 'sudo curl -s -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance?api-version=2021-02-01"' 
-    try {
-        $metadata = ConvertFrom-Json -inputObject $(Invoke-Command -ScriptBlock { bash -c $curlCommand })
-    }
-    catch {
-        Write-Error -Message "Failed to get VM metadata from Instance Metadata Service with error : $_"
-    }
-
-    return $metadata
-
-}
-
-#determine whether the CLI is currently installed and what version
-function Get-AzCliStatus {
-
-    $azCommand = 'sudo az -v | sudo grep azure-cli'
-
-    #set an initial set of default values
-    $cliData = @{
-        installStatus = "Unknown"
-        version = $null
-        versionStatus = "Unknown"
-        error = $null
-    }
-
-    #run the version command for the cli
-    try {
-        $message = $(Invoke-Command -ScriptBlock { bash -c $azCommand })
-    }
-    catch {
-        $message = $null
-        $cliData = @{
-            installStatus = "NotInstalled"
-            version = $null
-            error = $_
-        }
-        Write-Error -Message "Failed to get CLI version with error : $_"
-    }
-
-    #determine the current state of the cli install
-    if ($message){
-        if ($message.split(" ")[0] -eq 'azure-cli' -and $message.split(" ")[-1] -eq "*"){
-            $cliData = @{
-                installStatus = "Installed"
-                versionStatus = "UpgradeAvailable"
-                version = $message.split(" ")[-2]
-            }
-            
-        }
-        elseif ($message.split(" ")[0] -eq 'azure-cli' -and $message.split(" ")[-1] -ne "*"){
-            $cliData = @{
-                installStatus = "Installed"
-                versionStatus = "Latest"
-                version = $message.split(" ")[-1]
-            }
-        }
-        else {
-            $cliData = @{
-                installStatus = "Unknown"
-                versionStatus = "Unknown"
-                version = $message.split(" ")[-1]
-            }
-        }
-    }
-
-    return $cliData
-}
