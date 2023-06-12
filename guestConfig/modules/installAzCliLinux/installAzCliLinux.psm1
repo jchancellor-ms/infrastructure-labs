@@ -10,10 +10,10 @@ class installAzCliLinux {
     [installAzCliReason[]] $Reasons = [installAzCliReason[]]::new()
 
     [DscProperty()]
-    [String] $Version
+    [String] $Version = $null
 
     [DscProperty()]
-    [String] $versionStatus
+    [String] $versionStatus = $null
 
 
     # class constructor

@@ -1,0 +1,4 @@
+$Params = @{
+        Name = "localhost"
+        Ensure = Present
+}
