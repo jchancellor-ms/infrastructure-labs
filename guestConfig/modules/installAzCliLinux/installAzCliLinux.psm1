@@ -1,10 +1,10 @@
 [DscResource()]
 class installAzCliLinux {
     [DscProperty(Key)]
-    [string] $name
+    [string] $name = "test"
 
     [DscProperty(Mandatory)]
-    [installAzCliLinuxEnsure] $ensure
+    [installAzCliLinuxEnsure] $ensure = [installAzCliLinuxEnsure]::Absent
 
     [DscProperty(NotConfigurable)]
     [installAzCliReason[]] $reasons = [installAzCliReason[]]::new()
@@ -36,19 +36,19 @@ class installAzCliLinux {
         
 
         if ($cliStatus.installStatus -eq "NotInstalled" -and $metadata.compute.osType -eq "Linux") {
-            $currentState.Ensure = [installAzCliLinuxEnsure]::Absent
+            $currentState.ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
             $currentState.reasons += "The Azure CLI is not currently installed."
         }
         elseif ($cliStatus.installStatus -eq "Unknown" -and $metadata.compute.osType -eq "Linux") {
-            $currentState.Ensure = [installAzCliLinuxEnsure]::Absent
+            $currentState.ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
             $currentState.reasons += "The Azure CLI installation status was unable to be determined and returned error $($cliStatus.error)"
         }
         else {
-            $currentState.Ensure = [installAzCliLinuxEnsure]::Present
+            $currentState.ensure = [installAzCliLinuxEnsure]::Present
             $currentState.version = $cliStatus.version
             $currentState.versionStatus = $cliStatus.versionStatus
             if ($cliStatus.versionStatus -eq "UpgradeAvailable") {
@@ -67,7 +67,7 @@ class installAzCliLinux {
         $CurrentState = $this.Get()
 
         # if current state of Ensure does not match what I specified in my manifest
-        if ($CurrentState.Ensure -ne $this.ensure) {
+        if ($CurrentState.ensure -ne $this.ensure) {
             return $false
         }
 
