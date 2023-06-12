@@ -9,6 +9,14 @@ class installAzCliLinux {
     [DscProperty(NotConfigurable)]
     [installAzCliReason[]] $Reasons
 
+    [DscProperty()]
+    [String] $Version
+
+    [DscProperty()]
+    [String] $versionStatus
+
+    [DscProperty()]
+    [installAzCliStatus[]] $cliStatus
 
     # class constructor
     # Get() method
@@ -93,12 +101,29 @@ enum installAzCliLinuxEnsure
     Present
 }
 
+#define a class resource for the Reason property
 class installAzCliReason {
     [DscProperty()]
     [string] $Code
 
     [DscProperty()]
     [string] $Phrase
+}
+
+
+#define a class resource for the cliStatus property
+class installAzCliStatus {
+    [DscProperty()]
+    [string] $InstallStatus
+
+    [DscProperty()]
+    [string] $version
+
+    [DscProperty()]
+    [string] $versionStatus
+
+    [DscProperty()]
+    [string] $error
 }
 
 #get data from the IMDS for the vm for use in decision making
@@ -121,6 +146,15 @@ function Get-AzCliStatus {
 
     $azCommand = 'sudo az -v | sudo grep azure-cli'
 
+    #set an initial set of default values
+    $cliData = @{
+        installStatus = "Unknown"
+        version = $null
+        versionStatus = "Unknown"
+        error = $null
+    }
+
+    #run the version command for the cli
     try {
         $message = $(Invoke-Command -ScriptBlock { bash -c $azCommand })
     }
@@ -134,6 +168,7 @@ function Get-AzCliStatus {
         Write-Error -Message "Failed to get CLI version with error : $_"
     }
 
+    #determine the current state of the cli install
     if ($message){
         if ($message.split(" ")[0] -eq 'azure-cli' -and $message.split(" ")[-1] -eq "*"){
             $cliData = @{
