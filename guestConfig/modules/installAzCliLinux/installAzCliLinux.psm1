@@ -13,14 +13,15 @@ class installAzCliLinux {
     # class constructor
     # Get() method
     [installAzCliLinux] Get() {
+    
+        # Create the constructor
+        $currentState = [installAzCliLinux]::new()
+        $CurrentState.Name = $this.Name
 
         #get the data from the metadata
         $metadata = Get-VmDetails
         $cliStatus = Get-AzCliStatus
-
-
-        # Get the current state of the resource
-        $currentState = [installAzCliLinux]::new()
+        
 
         if ($cliStatus.installStatus -eq "NotInstalled" -and $metadata.compute.osType -eq "Linux") {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Absent
@@ -120,9 +121,18 @@ function Get-AzCliStatus {
 
     $azCommand = 'sudo az -v | sudo grep azure-cli'
 
-
+    try {
         $message = $(Invoke-Command -ScriptBlock { bash -c $azCommand })
-
+    }
+    catch {
+        $message = $null
+        $cliData = @{
+            installStatus = "NotInstalled"
+            version = $null
+            error = $_
+        }
+        Write-Error -Message "Failed to get CLI version with error : $_"
+    }
 
     if ($message){
         if ($message.split(" ")[0] -eq 'azure-cli' -and $message.split(" ")[-1] -eq "*"){
