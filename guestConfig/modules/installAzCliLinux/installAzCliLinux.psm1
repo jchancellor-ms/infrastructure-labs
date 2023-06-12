@@ -20,26 +20,26 @@ class installAzCliLinux {
 
         #get the data from the metadata
         $metadata = Get-VmDetails
-        $cliStatus = Get-AzCliStatus
+        $currentState.cliStatus = Get-AzCliStatus
         
 
-        if ($cliStatus.installStatus -eq "NotInstalled" -and $metadata.compute.osType -eq "Linux") {
+        if ($currentState.cliStatus.installStatus -eq "NotInstalled" -and $metadata.compute.osType -eq "Linux") {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
             $currentState.Reasons += "The Azure CLI is not currently installed."
         }
-        elseif ($cliStatus.installStatus -eq "Unknown" -and $metadata.compute.osType -eq "Linux") {
+        elseif ($currentState.cliStatus.installStatus -eq "Unknown" -and $metadata.compute.osType -eq "Linux") {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
-            $currentState.Reasons += "The Azure CLI installation status was unable to be determined and returned error $($cliStatus.error)"
+            $currentState.Reasons += "The Azure CLI installation status was unable to be determined and returned error $($currentState.cliStatus.error)"
         }
         else {
             $currentState.Ensure = [installAzCliLinuxEnsure]::Present
-            $currentState.version = $cliStatus.version
-            $currentState.versionStatus = $cliStatus.versionStatus
-            if ($cliStatus.versionStatus -eq "UpgradeAvailable") {
+            $currentState.version = $currentState.cliStatus.version
+            $currentState.versionStatus = $currentState.cliStatus.versionStatus
+            if ($currentState.cliStatus.versionStatus -eq "UpgradeAvailable") {
                 $currentState.Reasons += "The Azure CLI is installed but a newer version is available for upgrade"
             }
             else {
