@@ -1,5 +1,5 @@
 #determine whether the CLI is currently installed and what version
-function Get-AzCliStatus {     
+function get-AzCliStatus {     
     $azCommand = 'sudo az -v | sudo grep azure-cli'
 
 

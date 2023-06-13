@@ -24,8 +24,8 @@ class installAzCliLinux {
         $currentState = [installAzCliLinux]::new()
         $currentState.name = $this.name
 
-        $metadata = Get-AzMetadata
-        $cliStatus = Get-AzCliStatus
+        $metadata = get-AzMetadata
+        $cliStatus = get-AzCliStatus
 
         #get the data from the metadata        
 
