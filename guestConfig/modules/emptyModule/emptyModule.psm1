@@ -10,8 +10,6 @@ class emptyModule {
     [installAzCliReason[]] $reasons = [installAzCliReason[]]::new()
 
 
-
-
     # class constructor
     # Get() method
     [emptyModule] Get() {        
