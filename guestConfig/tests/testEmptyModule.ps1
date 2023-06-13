@@ -1,6 +1,11 @@
 $Params = @{
-    name = "localhost"
-    ensure = "Present"
+    name = 'emptyModule'
+    Module   = 'emptyModule'
+    Property = @{
+        ConfigurationScope  = 'Machine'
+        Ensure              = 'Present'
+    }
+
 }
 
 import-Module ./modules/emptyModule/
