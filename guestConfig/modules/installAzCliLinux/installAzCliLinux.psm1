@@ -100,8 +100,8 @@ class installAzCliLinux {
         }
 
         #if test failed, run the az CLI version agnostic install script
-        $curlCommand = "sudo curl -L https://aka.ms/InstallAzureCli | sudo bash"
-        $installOutput = Invoke-Command -ScriptBlock { bash -c $curlCommand }
+        $curlCommand = "sudo apt-get update;sudo apt-get install azure-cli -y"
+        Invoke-Command -ScriptBlock { bash -c $curlCommand }
 
     }
        

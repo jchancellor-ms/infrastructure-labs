@@ -18,4 +18,5 @@ foreach ($import in @($Public + $Private)) {
 # Export all of the public functions
 foreach ($file in $Public) {
     Export-ModuleMember -Function $file.BaseName
+    Write-Host "exported $($file.BaseName)"
 }

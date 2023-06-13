@@ -8,7 +8,7 @@ $Params = @{
 
 }
 
-$env:PSModulePath += ":$($pwd)./modules"
+$env:PSModulePath += ":$($pwd)/modules"
 
 import-Module ./modules/installAzCliLinux/
 import-Module ./modules/azMachineConfigCommon/
