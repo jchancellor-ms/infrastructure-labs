@@ -14,7 +14,7 @@ function Get-AzCliStatus {
         #run the version command for the cli - write any errors to stdout so that the logic can continue
         $message = $(Invoke-Command -ScriptBlock { 
             try {
-                bash -c $azCommand 
+                bash -c $azCommand 2>&1
             }
             catch {
                 return $null
