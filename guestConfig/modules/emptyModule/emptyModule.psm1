@@ -1,13 +1,13 @@
 [DscResource()]
 class emptyModule {
     [DscProperty(Key)]
-    [string] $name = "test"
+    [string] $name
 
     [DscProperty(Mandatory)]
-    [emptyModuleEnsure] $ensure = [emptyModuleEnsure]::Present
+    [emptyModuleEnsure] $ensure
 
     [DscProperty(NotConfigurable)]
-    [installAzCliReason[]] $reasons = [installAzCliReason[]]::new()
+    [installAzCliReason[]] $reasons
 
 
     # class constructor
