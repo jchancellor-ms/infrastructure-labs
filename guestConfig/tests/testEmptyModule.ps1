@@ -1,6 +1,7 @@
 $Params = @{
-    Name = "localhost"
-    Ensure = Present
+    name = "localhost"
+    ensure = "Present"
 }
 
-Get-GuestConfigurationPackageComplianceStatus -Path ./packages/installAzCliLinux.zip -Parameter $Params
+Invoke-DscResource @Params -Method Get
+#Get-GuestConfigurationPackageComplianceStatus -Path ./packages/installAzCliLinux.zip -Parameter $Params
