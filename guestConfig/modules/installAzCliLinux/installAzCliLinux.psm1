@@ -24,7 +24,7 @@ class installAzCliLinux {
         $currentState = [installAzCliLinux]::new()
         $currentState.name = $this.name
 
-        $metadata = Get-VmDetails
+        $metadata = Get-AzMetadata
         $cliStatus = Get-AzCliStatus
         Write-Host "The name used is $($this.name)"
 
