@@ -22,7 +22,7 @@ function Get-AzCliStatus {
         } -ErrorAction SilentlyContinue )
 
         #determine the current state of the cli install
-        if ($message -and $message.Type -eq [string]){
+        if ($message -and $($message.GetType()).Name -eq "String"){
             if ($message.split(" ")[0] -eq 'azure-cli' -and $message.split(" ")[-1] -eq "*"){
                 $cliData = @{
                     installStatus = "Installed"
