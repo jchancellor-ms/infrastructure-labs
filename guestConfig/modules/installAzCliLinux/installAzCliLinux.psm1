@@ -23,10 +23,9 @@ class installAzCliLinux {
         # Create the constructor
         $currentState = [installAzCliLinux]::new()
         $currentState.name = $this.name
-<#
+
         $metadata = Get-AzMetadata
         $cliStatus = Get-AzCliStatus
-        Write-Host "The name used is $($this.name)"
 
         #get the data from the metadata        
 
@@ -66,7 +65,7 @@ class installAzCliLinux {
                 }  
             }
         }
-#>
+
         return $currentState
     }
 
