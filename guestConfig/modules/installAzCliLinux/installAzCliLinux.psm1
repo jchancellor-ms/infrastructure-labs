@@ -4,7 +4,7 @@ class installAzCliLinux {
     [string] $name = "test"
 
     [DscProperty(Mandatory)]
-    [installAzCliLinuxEnsure] $ensure = [installAzCliLinuxEnsure]::Absent
+    [installAzCliLinuxEnsure] $ensure = [installAzCliLinuxEnsure]::Present
 
     [DscProperty(NotConfigurable)]
     [installAzCliReason[]] $reasons = [installAzCliReason[]]::new()
@@ -34,23 +34,36 @@ class installAzCliLinux {
             $currentState.ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
-            $currentState.reasons += "The Azure CLI is not currently installed."
+            
+            $currentState.reasons += [installAzCliReason[]]@{
+                Code = "$($this.name):AzureCLI:NotInstalled"
+                Phrase = "The Azure CLI is not currently installed."
+            } 
         }
         elseif ($cliStatus.installStatus -eq "Unknown" -and $metadata.compute.osType -eq "Linux") {
             $currentState.ensure = [installAzCliLinuxEnsure]::Absent
             $currentState.version = $null
             $currentState.versionStatus = $null
-            $currentState.reasons += "The Azure CLI installation status was unable to be determined and returned error $($cliStatus.error)"
+            $currentState.reasons += [installAzCliReason[]]@{
+                Code = "$($this.name):AzureCLI:Unknown"
+                Phrase = "The Azure CLI installation status was unable to be determined and returned error $($cliStatus.error)"
+            }             
         }
         else {
             $currentState.ensure = [installAzCliLinuxEnsure]::Present
             $currentState.version = $cliStatus.version
             $currentState.versionStatus = $cliStatus.versionStatus
             if ($cliStatus.versionStatus -eq "UpgradeAvailable") {
-                $currentState.reasons += "The Azure CLI is installed but a newer version is available for upgrade"
+                $currentState.reasons += [installAzCliReason[]]@{
+                    Code = "$($this.name):AzureCLI:UpgradeAvailable"
+                    Phrase = "The Azure CLI is installed but a newer version is available for upgrade"
+                }      
             }
             else {
-                $currentState.reasons += "The Azure CLI is installed and at the latest version"
+                $currentState.reasons += [installAzCliReason[]]@{
+                    Code = "$($this.name):AzureCLI:Latest"
+                    Phrase = "The Azure CLI is installed and at the latest version"
+                }  
             }
         }
 
@@ -59,14 +72,14 @@ class installAzCliLinux {
 
     [bool] Test() {
         # Test the current state of the resource against the desired state
-        $CurrentState = $this.Get()
+        $currentState = $this.Get()
 
         # if current state of Ensure does not match what I specified in my manifest
-        if ($CurrentState.ensure -ne $this.ensure) {
+        if ($currentState.ensure -ne $this.ensure) {
             return $false
         }
 
-        if ($CurrentState.versionStatus -ne "Latest"){
+        if ($currentState.versionStatus -ne "Latest"){
             return $false
         }
 
