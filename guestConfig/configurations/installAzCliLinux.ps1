@@ -9,7 +9,7 @@ If (!(Test-Path -PathType container $outFullPath)) {
 }
 
 Configuration installAzCliLinux {
-    Import-DscResource -ModuleName 'installAzCliLinux'
+    Import-DscResource -ModuleName installAzCliLinux
 
         installAzCliLinux thisLinuxMachine {
             name = "AzCLILatest"

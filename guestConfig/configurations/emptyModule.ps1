@@ -9,7 +9,7 @@ If (!(Test-Path -PathType container $outFullPath)) {
 }
 
 Configuration emptyModule {
-    Import-DscResource -ModuleName 'emptyModule'
+    Import-DscResource -ModuleName emptyModule
 
     Node localhost{
         emptyModule thisLinuxMachine {
