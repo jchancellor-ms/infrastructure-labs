@@ -96,7 +96,7 @@ class installAzCliLinux {
         # if this is true, then do nothing (because it is already in the desired state)
         # No need to use further compute resources
         # if it returns false we know that we can proceed with SET safely 
-        if ($this.Test()) {
+        if ($this.Get()) {
             return
         }
 

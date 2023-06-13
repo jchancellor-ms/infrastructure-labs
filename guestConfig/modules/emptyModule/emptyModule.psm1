@@ -34,7 +34,7 @@ class emptyModule {
     }
 
     [void] Set() {
-        if ($this.Test()) {
+        if ($this.Get()) {
             return
         }
 
