@@ -11,8 +11,8 @@ function Get-AzCliStatus {
             error = $null
         }
 
-        #run the version command for the cli
-        $message = $(Invoke-Command -ScriptBlock { bash -c $azCommand } -ErrorAction SilentlyContinue)
+        #run the version command for the cli - write any errors to stdout so that the logic can continue
+        $message = $(Invoke-Command -ScriptBlock { bash -c $azCommand } -ErrorAction SilentlyContinue 2>&1)
 
         #determine the current state of the cli install
         if ($message){
