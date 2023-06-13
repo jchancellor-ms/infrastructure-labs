@@ -1,13 +1,13 @@
 [DscResource()]
 class installAzCliLinux {
     [DscProperty(Key)]
-    [string] $name = "test"
+    [string] $name
 
     [DscProperty(Mandatory)]
-    [installAzCliLinuxEnsure] $ensure = [installAzCliLinuxEnsure]::Present
+    [installAzCliLinuxEnsure] $ensure
 
     [DscProperty(NotConfigurable)]
-    [installAzCliReason[]] $reasons = [installAzCliReason[]]::new()
+    [installAzCliReason[]] $reasons
 
     [DscProperty()]
     [String] $version = $null
