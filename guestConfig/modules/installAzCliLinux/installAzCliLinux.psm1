@@ -88,18 +88,12 @@ class installAzCliLinux {
 
     [void] Set() {
 
-        # Set always calls test first, test calls get (Current design pattern)
-        # this enables avoid side effects - if test was not run, you would note have a guarantee that the configuration is wrong
-        # only take action if you have to
-
-        # if this is true, then do nothing (because it is already in the desired state)
-        # No need to use further compute resources
-        # if it returns false we know that we can proceed with SET safely 
+        #Use the test method to validate whether the vm is in the proper state
         if ($this.Test()) {
             return
         }
 
-        #if test failed, run the az CLI version agnostic install script
+        #if test failed, run the install
         $curlCommand = "sudo apt-get update;sudo apt-get install azure-cli -y"
         Invoke-Command -ScriptBlock { bash -c $curlCommand }
 
