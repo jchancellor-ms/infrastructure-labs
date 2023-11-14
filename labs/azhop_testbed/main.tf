@@ -8,7 +8,7 @@ locals {
   bastion_name        = "${var.prefix}-bastion-${var.region}-${local.name_string_suffix}"
   la_name             = "${var.prefix}-la-${var.region}-${local.name_string_suffix}"
   deployer_vm_name    = "dp-${var.region}-${local.name_string_suffix}"
-  guestconfig_vm_name    = "gc-${var.region}-${local.name_string_suffix}"
+  guestconfig_vm_name = "gc-${var.region}-${local.name_string_suffix}"
   vm_vault_identity   = "vm-vault-identity-${local.name_string_suffix}"
 
   config_values_dc = {
@@ -112,12 +112,12 @@ resource "azurerm_availability_set" "domain_controllers" {
 module "lab_dc" {
   source = "../../modules/lab_guest_server_2019_dc"
 
-  rg_name              = azurerm_resource_group.lab_rg.name
-  rg_location          = azurerm_resource_group.lab_rg.location
-  vm_name_1            = local.dc_vm_name
-  subnet_id            = module.lab_hub_virtual_network.subnet_ids["DCSubnet"].id
-  vm_sku               = "Standard_D4as_v5"
-  key_vault_id         = module.on_prem_keyvault_with_access_policy.keyvault_id
+  rg_name      = azurerm_resource_group.lab_rg.name
+  rg_location  = azurerm_resource_group.lab_rg.location
+  vm_name_1    = local.dc_vm_name
+  subnet_id    = module.lab_hub_virtual_network.subnet_ids["DCSubnet"].id
+  vm_sku       = "Standard_D4as_v5"
+  key_vault_id = module.on_prem_keyvault_with_access_policy.keyvault_id
   #keyvault_name        = local.keyvault_name
   private_ip_address_1 = cidrhost(module.lab_hub_virtual_network.subnet_ids["DCSubnet"].address_prefixes[0], 100)
   availability_set_id  = azurerm_availability_set.domain_controllers.id
@@ -218,3 +218,5 @@ module "guestconfig_linux" {
   config_values     = local.config_values_deployer
   vm_vault_identity = azurerm_user_assigned_identity.vm_vault_identity.id
 }
+
+

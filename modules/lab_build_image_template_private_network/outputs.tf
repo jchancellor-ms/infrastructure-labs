@@ -1,3 +1,3 @@
 output "template" {
-    value = data.template_file.image_template.rendered
+  value = data.template_file.image_template.rendered
 }

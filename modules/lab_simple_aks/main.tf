@@ -1,10 +1,10 @@
 resource "azurerm_kubernetes_cluster" "simple" {
-  name                = var.cluster_name
-  location            = var.rg_location
-  resource_group_name = var.rg_name
-  dns_prefix          = var.dns_prefix
+  name                      = var.cluster_name
+  location                  = var.rg_location
+  resource_group_name       = var.rg_name
+  dns_prefix                = var.dns_prefix
   automatic_channel_upgrade = stable
-  oidc_issuer_enabled = true
+  oidc_issuer_enabled       = true
   workload_identity_enabled = true
 
 

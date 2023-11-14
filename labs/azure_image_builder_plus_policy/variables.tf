@@ -10,7 +10,7 @@ variable "spoke_subnets" {}
 variable "aib_role_scope" {}
 variable "ext_role_scope" {}
 variable "image_configurations" {
-    type = list(object({
+  type = list(object({
     image_definition_name  = string
     template_file_name     = string
     os_type                = string

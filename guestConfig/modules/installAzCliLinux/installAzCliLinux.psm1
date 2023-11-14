@@ -27,7 +27,7 @@ class installAzCliLinux {
         $metadata = get-AzMetadata
         $cliStatus = get-AzCliStatus
 
-        #get the data from the metadata        
+        #get the data from the metadata  
 
         if ($cliStatus.installStatus -eq "NotInstalled" -and $metadata.compute.osType -eq "Linux") {
             $currentState.ensure = [installAzCliLinuxEnsure]::Absent

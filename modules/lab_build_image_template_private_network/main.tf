@@ -24,7 +24,7 @@ data "template_file" "image_template" {
     deploy_subnet_id          = var.deploy_subnet_id
     staging_resource_group_id = var.staging_resource_group_id
     replication_regions       = jsonencode(var.replication_regions)
-     
+
   }
 }
 
